@@ -63,6 +63,14 @@ conversation. It is deliberately replaceable: the adapter is one file
 ([runtime-adapter.tsx](../src/agent/experience/runtime-adapter.tsx)) over a
 plain message store. Swapping the shell touches zero capability code.
 
+Two details of model output live here rather than in any capability: answers
+are markdown, rendered through react-markdown (a React tree, never injected
+HTML); and reasoning arrives on its own protocol frame, shown as a collapsed
+block so it is never mistaken for the answer. Models that leak their channel
+format into visible text (`<|channel|>analysis…`) are cleaned by
+[sanitize.ts](../src/agent/experience/sanitize.ts), which strips only known
+control tokens and leaves ordinary prose alone.
+
 ## The transport (host protocol v1)
 
 The host is logically one layer but physically split. The browser half and
@@ -79,6 +87,16 @@ server half speak a small versioned protocol over `POST /api/chat`:
    them through Agent Surface (confirmations wait HERE, between requests — no
    stream is held open across a human decision), appends the results, and
    posts the next step.
+
+One sharp edge the host absorbs: a model may call a server tool and a client
+tool in the *same* message. Mastra executes the server tool but suspends for
+the browser without emitting that result — it appears in neither
+`fullStream` nor `stream.toolResults`. The host captures domain results as
+they are produced and answers any call Mastra left open
+([server-compose.ts](../src/agent/host/server-compose.ts),
+`settleOrphanedServerCalls`). Without it the model would receive a tool-call
+with no tool-result — which providers reject — and the UI would show a card
+stuck on "running".
 
 The server keeps no run state; the messages are the state. Run limits (max
 steps, turn deadline, repeated-failure loop detection, model inactivity

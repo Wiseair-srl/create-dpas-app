@@ -79,11 +79,36 @@ function nextParts(options: LanguageModelV2CallOptions): StreamPart[] {
 
   const last = results.at(-1);
 
-  // Step 1 — nothing done yet: narrate and set the filters.
+  // Step 1 — narrate, then call a SERVER tool and a CLIENT tool in the same
+  // message. Real models batch tool calls like this, and it is the case that
+  // suspends the run mid-step: Mastra executes the domain read but drops its
+  // result, so the Agent Host has to answer that call itself. Keeping it in
+  // the script means CI exercises that path on every run.
   if (!results.some((r) => r.toolName === "view_devices__filters__set")) {
     return [
-      ...textParts(`t${++callCounter}`, "I'll filter the table to offline devices in Milan.\n"),
-      ...call("view_devices__filters__set", { status: "offline", city: "Milan" }),
+      // Reasoning is streamed separately from the answer, and some models
+      // leak channel markers into text — both are exercised here so the
+      // experience layer's handling stays covered.
+      { type: "reasoning-start", id: `rs${callCounter}` },
+      {
+        type: "reasoning-delta",
+        id: `rs${callCounter}`,
+        delta: "<|channel|>analysis Filter to Milan, then read the table.",
+      },
+      { type: "reasoning-end", id: `rs${callCounter}` },
+      ...textParts(
+        `t${++callCounter}`,
+        "Checking the fleet and filtering to **offline** devices in `Milan`.\n",
+      ),
+      toolCallPart(`stc_${++callCounter}`, "domain_devices__list", {
+        status: "offline",
+        city: "Milan",
+      }),
+      toolCallPart(`stc_${++callCounter}`, "view_devices__filters__set", {
+        status: "offline",
+        city: "Milan",
+      }),
+      finish("tool-calls"),
     ];
   }
 
@@ -144,7 +169,7 @@ function nextParts(options: LanguageModelV2CallOptions): StreamPart[] {
   return [
     ...textParts(
       `t${++callCounter}`,
-      `Done — ${disabled} offline device${disabled === 1 ? "" : "s"} in Milan ${
+      `Done — **${disabled}** offline device${disabled === 1 ? "" : "s"} in Milan ${
         disabled === 1 ? "is" : "are"
       } now disabled. The table reflects the change.`,
     ),

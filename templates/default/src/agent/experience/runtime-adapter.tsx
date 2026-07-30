@@ -20,7 +20,19 @@ export function convertEntry(entry: ChatEntry): ThreadMessageLike {
     case "user":
       return { id: entry.id, role: "user", content: [{ type: "text", text: entry.text }] };
     case "assistant":
-      return { id: entry.id, role: "assistant", content: [{ type: "text", text: entry.text }] };
+      return {
+        id: entry.id,
+        role: "assistant",
+        content: [{ type: "text", text: entry.text }],
+        metadata: { custom: { entry } },
+      };
+    case "reasoning":
+      return {
+        id: entry.id,
+        role: "assistant",
+        content: [{ type: "text", text: entry.text }],
+        metadata: { custom: { entry } },
+      };
     case "note":
       return {
         id: entry.id,

@@ -26,6 +26,14 @@ test.describe("live agent mode (scripted model)", () => {
     await expect(page.locator("[data-device-row]")).toHaveCount(3, { timeout: 20_000 });
     await expect(page.getByText("3 selected")).toBeVisible();
 
+    // The first message batches a server tool with a client tool. Mastra runs
+    // the domain read but drops its result when the run suspends, so the host
+    // answers that call itself — the card must settle, never hang on
+    // "running".
+    await expect(
+      page.locator('[data-testid="tool-card"][data-capability="domain:devices.list"]'),
+    ).toHaveAttribute("data-status", "ok", { timeout: 20_000 });
+
     // Confirmation gates the contextual mutation, exactly as in the demo.
     const confirmation = page.getByTestId("confirmation-card");
     await expect(confirmation).toBeVisible({ timeout: 20_000 });
@@ -40,6 +48,23 @@ test.describe("live agent mode (scripted model)", () => {
       { timeout: 20_000 },
     );
     await expect(metricValue(page, "Disabled")).toHaveText("3");
+
+    // Markdown is rendered, not printed: emphasis and inline code become
+    // elements, and no raw ** or backticks survive.
+    const transcript = page.getByTestId("assistant-transcript");
+    await expect(transcript.locator("strong").first()).toBeVisible();
+    await expect(transcript.locator("code").first()).toHaveText("Milan");
+    await expect(transcript).not.toContainText("**");
+
+    // Reasoning is a separate, collapsed block — never mixed into the answer,
+    // and stripped of the channel markers some models leak.
+    const reasoning = page.getByTestId("reasoning").first();
+    await expect(reasoning).toBeVisible();
+    await expect(reasoning).toContainText("Model reasoning");
+    await expect(reasoning).toContainText("Filter to Milan");
+    // The channel header is gone, name and all.
+    await expect(transcript).not.toContainText("<|channel|>");
+    await expect(reasoning).not.toContainText("analysis");
 
     // Server-executed domain tools ran inside the loop this turn — the
     // inspector shows the composed domain catalog arriving per step.

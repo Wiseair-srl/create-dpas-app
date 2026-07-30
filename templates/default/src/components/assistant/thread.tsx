@@ -6,11 +6,12 @@ import {
   MessagePrimitive,
   ThreadPrimitive,
 } from "@assistant-ui/react";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Brain, Square } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { ToolCallCard } from "@/agent/experience/tool-renderers";
 import type { ChatEntry } from "@/agent/experience/message-store";
+import { MarkdownText } from "./markdown-text";
 
 /**
  * The chat thread on assistant-ui's headless primitives. assistant-ui owns
@@ -29,12 +30,36 @@ function UserMessage() {
   );
 }
 
-function AssistantTextMessage() {
+/** Answers are markdown: emphasis, inline code for ids, the odd list. */
+function AssistantTextMessage({ text }: { text: string }) {
   return (
     <MessagePrimitive.Root className="flex">
-      <div className="max-w-[92%] rounded-lg bg-surface-muted px-3 py-2 text-sm leading-6">
-        <MessagePrimitive.Parts />
+      <div
+        data-testid="assistant-text"
+        className="max-w-[92%] rounded-lg bg-surface-muted px-3 py-2 text-sm leading-6"
+      >
+        <MarkdownText>{text}</MarkdownText>
       </div>
+    </MessagePrimitive.Root>
+  );
+}
+
+/**
+ * Model reasoning, folded away by default: useful when debugging a plan,
+ * noise the rest of the time, and never mistaken for the answer.
+ */
+function ReasoningMessage({ text }: { text: string }) {
+  return (
+    <MessagePrimitive.Root className="flex">
+      <details className="w-full rounded-lg border border-dashed border-border" data-testid="reasoning">
+        <summary className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground">
+          <Brain aria-hidden className="h-3.5 w-3.5" />
+          Model reasoning
+        </summary>
+        <div className="dpas-scroll max-h-56 overflow-y-auto px-3 pb-2 text-xs leading-5 text-muted-foreground">
+          <MarkdownText>{text}</MarkdownText>
+        </div>
+      </details>
     </MessagePrimitive.Root>
   );
 }
@@ -73,6 +98,7 @@ export function AssistantThread({ welcome }: { welcome: ReactNode }) {
           const entry = entryOf(message.metadata?.custom);
           if (message.role === "user") return <UserMessage />;
           if (entry?.kind === "note") return <NoteMessage entry={entry} />;
+          if (entry?.kind === "reasoning") return <ReasoningMessage text={entry.text} />;
           if (entry?.kind === "tool") {
             return (
               <MessagePrimitive.Root>
@@ -80,7 +106,7 @@ export function AssistantThread({ welcome }: { welcome: ReactNode }) {
               </MessagePrimitive.Root>
             );
           }
-          return <AssistantTextMessage />;
+          return <AssistantTextMessage text={entry?.kind === "assistant" ? entry.text : ""} />;
         }}
       </ThreadPrimitive.Messages>
     </ThreadPrimitive.Viewport>

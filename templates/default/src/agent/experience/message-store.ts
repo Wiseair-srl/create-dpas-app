@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import type { WireModelMessage } from "@/agent/host/protocol";
 import { newConversationId } from "@/agent/host/identity";
+import { sanitizeModelText } from "./sanitize";
 
 /**
  * The chat's message model, shared by live mode and the guided demo. This is
@@ -14,6 +15,7 @@ import { newConversationId } from "@/agent/host/identity";
 export type ChatEntry =
   | { kind: "user"; id: string; text: string }
   | { kind: "assistant"; id: string; text: string }
+  | { kind: "reasoning"; id: string; text: string }
   | {
       kind: "tool";
       id: string;
@@ -38,6 +40,7 @@ interface MessageStoreState {
   running: AssistantMode;
   appendUser: (text: string) => void;
   appendAssistantText: (delta: string) => void;
+  appendReasoning: (delta: string) => void;
   /** Close the current assistant text bubble so the next delta starts a new one. */
   sealAssistantText: () => void;
   appendNote: (tone: "demo" | "info" | "error", text: string) => void;
@@ -67,13 +70,33 @@ export const useMessageStore = create<MessageStoreState>((set) => ({
     set((s) => ({ entries: [...s.entries, { kind: "user", id: nextId("u"), text }] })),
   appendAssistantText: (delta) =>
     set((s) => {
+      // Models sometimes leak their channel markers into visible text; strip
+      // them here so the transcript shows the answer, not the plumbing.
+      const clean = sanitizeModelText(delta);
+      if (clean.length === 0) return s;
       const last = s.entries.at(-1);
       if (last?.kind === "assistant") {
         return {
-          entries: [...s.entries.slice(0, -1), { ...last, text: last.text + delta }],
+          entries: [...s.entries.slice(0, -1), { ...last, text: last.text + clean }],
         };
       }
-      return { entries: [...s.entries, { kind: "assistant", id: nextId("a"), text: delta }] };
+      return {
+        entries: [...s.entries, { kind: "assistant", id: nextId("a"), text: clean.trimStart() }],
+      };
+    }),
+  appendReasoning: (delta) =>
+    set((s) => {
+      const clean = sanitizeModelText(delta);
+      if (clean.length === 0) return s;
+      const last = s.entries.at(-1);
+      if (last?.kind === "reasoning") {
+        return {
+          entries: [...s.entries.slice(0, -1), { ...last, text: last.text + clean }],
+        };
+      }
+      return {
+        entries: [...s.entries, { kind: "reasoning", id: nextId("r"), text: clean.trimStart() }],
+      };
     }),
   sealAssistantText: () =>
     set((s) => {
