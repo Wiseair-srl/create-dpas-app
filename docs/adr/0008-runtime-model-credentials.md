@@ -37,6 +37,26 @@ Runtime configuration is scoped to OpenRouter. Anthropic and OpenAI remain
 env-configured; adding them would mean provider-specific verification and a
 wider attack surface for no additional demonstration value.
 
+## Gateway model ids (added after a live-key failure)
+
+Mastra's model router **strips the leading provider segment** before calling
+upstream. A bare `anthropic/claude-sonnet-4.5` therefore reached OpenRouter
+as `claude-sonnet-4.5` — not a valid id there — and the run died with
+OpenRouter's *"No endpoints found that support tool use"*, which points at
+the tools rather than the real cause.
+
+`toRouterModelId()` prefixes the gateway, so `openrouter/anthropic/claude-
+sonnet-4.5` sends `anthropic/claude-sonnet-4.5` upstream. Users may type
+either form. Verified by driving Mastra against a local stub and reading the
+request body; pinned by a regression test. The env-configured
+`MODEL_PROVIDER=openrouter` path had the same defect and the same fix.
+Direct providers (Anthropic, OpenAI) are unaffected — their APIs want the
+bare model id, which is exactly what stripping produces.
+
+"Test key" additionally verifies the model exists on OpenRouter and lists
+`tools` in its supported parameters, so this class of failure is diagnosed
+before a conversation rather than during one.
+
 ## Consequences
 
 - A generated app goes from `pnpm dev` to live chat without touching a file.

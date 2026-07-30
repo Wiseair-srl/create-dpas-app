@@ -18,6 +18,21 @@ export type RuntimeProvider = (typeof RUNTIME_PROVIDERS)[number];
 
 export const DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4.5";
 
+/**
+ * Mastra's model router strips the leading provider segment before calling
+ * upstream: a bare `anthropic/claude-sonnet-4.5` is sent to OpenRouter as
+ * `claude-sonnet-4.5`, which is not an OpenRouter model id — the request
+ * then fails with "No endpoints found that support tool use".
+ *
+ * Prefixing with the gateway (`openrouter/anthropic/claude-sonnet-4.5`)
+ * makes Mastra send `anthropic/claude-sonnet-4.5`, which is what OpenRouter
+ * expects. Users may type either form.
+ */
+export function toRouterModelId(provider: RuntimeProvider, modelId: string): string {
+  const bare = modelId.trim().replace(/^openrouter\//, "");
+  return `${provider}/${bare}`;
+}
+
 export const RuntimeModelInputSchema = z.object({
   provider: z.enum(RUNTIME_PROVIDERS),
   apiKey: z.string().min(16).max(400),

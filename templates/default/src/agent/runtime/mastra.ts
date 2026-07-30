@@ -4,6 +4,7 @@ import {
   getRuntimeModelConfig,
   getRuntimeModelPublicInfo,
   runtimeConfigAllowed,
+  toRouterModelId,
 } from "@/server/model-config";
 import { ASSISTANT_INSTRUCTIONS } from "./instructions";
 import { createScriptedModel } from "./scripted-model";
@@ -105,14 +106,22 @@ function resolveModel(): ModelInput | null {
   if (runtime) {
     // Mastra's model router accepts an explicit key, so a UI-supplied
     // credential never has to be written into the process environment.
-    return { id: runtime.modelId, apiKey: runtime.apiKey } as unknown as ModelInput;
+    return {
+      id: toRouterModelId(runtime.provider, runtime.modelId),
+      apiKey: runtime.apiKey,
+    } as unknown as ModelInput;
   }
 
   const config = envModelConfig();
   if (!config.live) return null;
   if (config.provider === "mock") return createScriptedModel() as unknown as ModelInput;
-  // Model-router string: "provider/model-id", key read from the environment.
-  return (process.env.MODEL_ID ?? DEFAULT_MODEL_IDS[config.provider]) as ModelInput;
+
+  const modelId = process.env.MODEL_ID ?? DEFAULT_MODEL_IDS[config.provider] ?? "";
+  // OpenRouter is a gateway: the id needs its prefix so the vendor segment
+  // survives to the upstream request (see toRouterModelId).
+  return (
+    config.provider === "openrouter" ? toRouterModelId("openrouter", modelId) : modelId
+  ) as ModelInput;
 }
 
 export const RUN_LIMITS = {

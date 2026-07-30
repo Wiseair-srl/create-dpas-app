@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { getRuntimeModelConfig, runtimeConfigAllowed } from "@/server/model-config";
 
 /**
- * Explicitly check the connected key against the provider. Separate from
- * saving on purpose: saving stays local and deterministic, and this network
- * call only happens when the user asks for it.
+ * Explicitly check the connected key AND that the chosen model can actually
+ * do what this app needs: tool calling. A model without tool support fails
+ * mid-conversation with OpenRouter's "No endpoints found that support tool
+ * use", which is a confusing place to learn it — so we check here, on
+ * demand. Separate from saving on purpose: saving stays local, deterministic
+ * and offline-friendly.
  */
 export const dynamic = "force-dynamic";
+
+interface OpenRouterModel {
+  id: string;
+  supported_parameters?: string[];
+}
 
 export async function POST() {
   if (!runtimeConfigAllowed()) {
@@ -21,17 +29,39 @@ export async function POST() {
   }
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/key", {
+    const keyCheck = await fetch("https://openrouter.ai/api/v1/key", {
       headers: { authorization: `Bearer ${runtime.apiKey}` },
       signal: AbortSignal.timeout(10_000),
     });
-    if (response.status === 401 || response.status === 403) {
+    if (keyCheck.status === 401 || keyCheck.status === 403) {
       return NextResponse.json({ ok: false, reason: "OpenRouter rejected this key." });
     }
-    if (!response.ok) {
+    if (!keyCheck.ok) {
+      return NextResponse.json({ ok: false, reason: `OpenRouter answered ${keyCheck.status}.` });
+    }
+
+    const wanted = runtime.modelId.replace(/^openrouter\//, "");
+    const catalog = await fetch("https://openrouter.ai/api/v1/models", {
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (catalog.ok) {
+      const { data } = (await catalog.json()) as { data: OpenRouterModel[] };
+      const model = data.find((entry) => entry.id === wanted);
+      if (!model) {
+        return NextResponse.json({
+          ok: false,
+          reason: `Key is valid, but "${wanted}" is not an OpenRouter model id.`,
+        });
+      }
+      if (!(model.supported_parameters ?? []).includes("tools")) {
+        return NextResponse.json({
+          ok: false,
+          reason: `Key is valid, but "${wanted}" does not support tool calling — the assistant needs it.`,
+        });
+      }
       return NextResponse.json({
-        ok: false,
-        reason: `OpenRouter answered ${response.status}.`,
+        ok: true,
+        reason: `Key accepted and "${wanted}" supports tool calling.`,
       });
     }
     return NextResponse.json({ ok: true, reason: "OpenRouter accepted this key." });

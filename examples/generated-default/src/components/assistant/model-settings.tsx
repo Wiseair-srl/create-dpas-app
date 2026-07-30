@@ -109,7 +109,15 @@ export function ModelSettingsDialog({
               />
             </Field>
 
-            <Field label="Model" hint="Any OpenRouter model id that supports tool calling.">
+            <Field
+              label="Model"
+              hint={
+                <>
+                  An OpenRouter id in <span className="font-mono">vendor/model</span> form. It must
+                  support tool calling — “Test key” checks that for you once connected.
+                </>
+              }
+            >
               <input
                 type="text"
                 autoComplete="off"

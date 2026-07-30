@@ -7,6 +7,7 @@ import {
   runtimeConfigAllowed,
   RuntimeModelInputSchema,
   setRuntimeModelConfig,
+  toRouterModelId,
   DEFAULT_OPENROUTER_MODEL,
 } from "./model-config";
 
@@ -80,6 +81,30 @@ describe("key handling", () => {
     setRuntimeModelConfig({ provider: "openrouter", apiKey: KEY });
     clearRuntimeModelConfig();
     expect(getRuntimeModelConfig()).toBeNull();
+  });
+});
+
+describe("router model id", () => {
+  /**
+   * Regression: Mastra strips the leading provider segment before calling
+   * upstream. A bare "anthropic/claude-sonnet-4.5" reached OpenRouter as
+   * "claude-sonnet-4.5" — not a valid id there — and the run failed with
+   * "No endpoints found that support tool use".
+   */
+  it("keeps the vendor segment by prefixing the gateway", () => {
+    expect(toRouterModelId("openrouter", "anthropic/claude-sonnet-4.5")).toBe(
+      "openrouter/anthropic/claude-sonnet-4.5",
+    );
+  });
+
+  it("accepts an already-prefixed id without doubling it", () => {
+    expect(toRouterModelId("openrouter", "openrouter/anthropic/claude-sonnet-4.5")).toBe(
+      "openrouter/anthropic/claude-sonnet-4.5",
+    );
+  });
+
+  it("trims surrounding whitespace", () => {
+    expect(toRouterModelId("openrouter", "  openai/gpt-5.1  ")).toBe("openrouter/openai/gpt-5.1");
   });
 });
 
