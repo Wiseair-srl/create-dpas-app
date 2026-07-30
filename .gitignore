@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+.env.*.local
+/templates/default/.data/
+/examples/generated-default/.data/
+/packages/create-dpas-app/template/

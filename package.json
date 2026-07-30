@@ -1,0 +1,27 @@
+{
+  "name": "create-dpas-app-monorepo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev": "pnpm --filter dpas-template-default dev",
+    "build": "pnpm -r --filter './packages/*' --filter './templates/*' build",
+    "lint": "pnpm -r --filter './packages/*' --filter './templates/*' lint",
+    "typecheck": "pnpm -r --filter './packages/*' --filter './templates/*' typecheck",
+    "test": "pnpm -r --filter './packages/*' --filter './templates/*' test",
+    "test:e2e": "pnpm --filter dpas-template-default test:e2e",
+    "test:scaffold": "node scripts/scaffold-smoke.mjs",
+    "check:example": "node scripts/check-example-drift.mjs",
+    "regen:example": "node scripts/regen-example.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.5",
+    "prettier": "^3.6.2"
+  }
+}

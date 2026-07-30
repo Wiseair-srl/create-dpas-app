@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # The DPAS capability providers move together; review them as one PR.
+      dpas-providers:
+        patterns:
+          - "@agent-surface/*"
+          - "@orpc-agent/*"
+          - "@orpc/*"
+      agent-runtime:
+        patterns:
+          - "@mastra/*"
+          - "ai"
+          - "@ai-sdk/*"
+          - "@assistant-ui/*"
+      dev-tooling:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "typescript*"
+          - "vitest"
+          - "@playwright/*"
+          - "prettier"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

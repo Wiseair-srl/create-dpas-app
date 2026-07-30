@@ -1,0 +1,52 @@
+{
+  "name": "create-dpas-app",
+  "version": "0.1.0",
+  "description": "Scaffold a Dual-Plane Agent Stack (DPAS) application: Agent Surface + oRPC Agent + Mastra + assistant-ui.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "bin": {
+    "create-dpas-app": "./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist",
+    "template"
+  ],
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/sync-template.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^26.1.2",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
+  },
+  "keywords": [
+    "dpas",
+    "agent",
+    "scaffold",
+    "create-app",
+    "agent-surface",
+    "orpc-agent",
+    "mastra",
+    "assistant-ui"
+  ]
+}

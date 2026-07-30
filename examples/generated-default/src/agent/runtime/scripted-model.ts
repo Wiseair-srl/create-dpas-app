@@ -1,0 +1,178 @@
+import type { LanguageModelV2, LanguageModelV2CallOptions } from "@ai-sdk/provider";
+
+/**
+ * A deterministic LanguageModelV2 that follows the golden scenario
+ * (ADR-0006). It exists so the ENTIRE live pipeline — route, per-turn
+ * composition, Mastra loop, client-tool suspension, browser dispatch,
+ * confirmation, oRPC execution — can run in CI with zero credentials.
+ *
+ * This is not the guided demo (which needs no model at all); it is a
+ * scripted stand-in for a real provider, selected with MODEL_PROVIDER=mock.
+ */
+
+type StreamPart = Record<string, unknown>;
+
+const usage = { inputTokens: 16, outputTokens: 16, totalTokens: 32 };
+
+function streamOf(parts: StreamPart[]): ReadableStream<StreamPart> {
+  return new ReadableStream({
+    start(controller) {
+      for (const part of parts) controller.enqueue(part);
+      controller.close();
+    },
+  });
+}
+
+function textParts(id: string, text: string): StreamPart[] {
+  return [
+    { type: "text-start", id },
+    { type: "text-delta", id, delta: text },
+    { type: "text-end", id },
+  ];
+}
+
+function toolCallPart(toolCallId: string, toolName: string, input: unknown): StreamPart {
+  return { type: "tool-call", toolCallId, toolName, input: JSON.stringify(input) };
+}
+
+interface PromptToolResult {
+  toolName: string;
+  value: unknown;
+}
+
+/** Collect tool results from the conversation, in order. */
+function collectToolResults(prompt: unknown): PromptToolResult[] {
+  const results: PromptToolResult[] = [];
+  if (!Array.isArray(prompt)) return results;
+  for (const message of prompt) {
+    if (message?.role !== "tool" || !Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      if (part?.type === "tool-result") {
+        const output = part.output as { type?: string; value?: unknown } | undefined;
+        results.push({
+          toolName: String(part.toolName ?? ""),
+          value: output?.type === "json" ? output.value : output?.value,
+        });
+      }
+    }
+  }
+  return results;
+}
+
+function hasTool(options: LanguageModelV2CallOptions, name: string): boolean {
+  return (options.tools ?? []).some((tool) => tool.name === name);
+}
+
+function isErrorValue(value: unknown): boolean {
+  return Boolean(value && typeof value === "object" && "error" in (value as object));
+}
+
+let callCounter = 0;
+
+function nextParts(options: LanguageModelV2CallOptions): StreamPart[] {
+  const results = collectToolResults(options.prompt);
+  const finish = (reason: string): StreamPart => ({ type: "finish", finishReason: reason, usage });
+  const call = (name: string, input: unknown): StreamPart[] => [
+    toolCallPart(`stc_${++callCounter}`, name, input),
+    finish("tool-calls"),
+  ];
+
+  const last = results.at(-1);
+
+  // Step 1 — nothing done yet: narrate and set the filters.
+  if (!results.some((r) => r.toolName === "view_devices__filters__set")) {
+    return [
+      ...textParts(`t${++callCounter}`, "I'll filter the table to offline devices in Milan.\n"),
+      ...call("view_devices__filters__set", { status: "offline", city: "Milan" }),
+    ];
+  }
+
+  // Step 2 — read what became visible.
+  if (!results.some((r) => r.toolName === "view_devices__table__readState")) {
+    return call("view_devices__table__readState", {});
+  }
+
+  // Step 3 — select the visible rows the read reported.
+  if (!results.some((r) => r.toolName === "view_devices__table__selectRows")) {
+    const read = results.findLast((r) => r.toolName === "view_devices__table__readState");
+    const visible =
+      read && typeof read.value === "object" && read.value !== null
+        ? ((read.value as { visibleRows?: Array<{ id?: string }> }).visibleRows ?? [])
+        : [];
+    const ids = visible.map((row) => row.id).filter((id): id is string => typeof id === "string");
+    if (ids.length === 0) {
+      return [
+        ...textParts(
+          `t${++callCounter}`,
+          "There are no offline devices in Milan right now, so there is nothing to disable.",
+        ),
+        finish("stop"),
+      ];
+    }
+    return call("view_devices__table__selectRows", { ids, mode: "replace" });
+  }
+
+  // Step 4 — the destructive contextual call. Its input is bound and locked;
+  // only fields still in the schema may be sent.
+  if (!results.some((r) => r.toolName === "domain_devices__disable")) {
+    if (!hasTool(options, "domain_devices__disable")) {
+      return [
+        ...textParts(
+          `t${++callCounter}`,
+          "I selected the offline devices in Milan, but disabling devices is not available " +
+            "to the current identity — an operator has to do this part.",
+        ),
+        finish("stop"),
+      ];
+    }
+    return call("domain_devices__disable", { reason: "Offline in Milan (agent-assisted sweep)" });
+  }
+
+  // Step 5 — summarize honestly, based on the disable result.
+  if (last && isErrorValue(last.value)) {
+    const code = (last.value as { error?: { code?: string } }).error?.code ?? "ERROR";
+    const text =
+      code === "CONFIRMATION_INVALID"
+        ? "You declined the confirmation, so I did not disable anything. The selection is unchanged."
+        : `The disable call did not complete (${code}). No devices were changed.`;
+    return [...textParts(`t${++callCounter}`, text), finish("stop")];
+  }
+  const disabled =
+    last && typeof last.value === "object" && last.value !== null
+      ? ((last.value as { disabled?: number }).disabled ?? 0)
+      : 0;
+  return [
+    ...textParts(
+      `t${++callCounter}`,
+      `Done — ${disabled} offline device${disabled === 1 ? "" : "s"} in Milan ${
+        disabled === 1 ? "is" : "are"
+      } now disabled. The table reflects the change.`,
+    ),
+    finish("stop"),
+  ];
+}
+
+export function createScriptedModel(): LanguageModelV2 {
+  return {
+    specificationVersion: "v2",
+    provider: "dpas-scripted",
+    modelId: "golden-scenario",
+    supportedUrls: {},
+    async doGenerate() {
+      throw new Error("The scripted model only supports streaming.");
+    },
+    async doStream(options) {
+      const parts: StreamPart[] = [
+        { type: "stream-start", warnings: [] },
+        {
+          type: "response-metadata",
+          id: `scripted-${++callCounter}`,
+          modelId: "golden-scenario",
+          timestamp: new Date(),
+        },
+        ...nextParts(options),
+      ];
+      return { stream: streamOf(parts) } as Awaited<ReturnType<LanguageModelV2["doStream"]>>;
+    },
+  };
+}

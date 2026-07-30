@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens. Hue is spent on meaning, not decoration:
+ *  - accent (blue)  → interactive affordances
+ *  - view (blue)    → presentation-plane tool activity
+ *  - domain (amber) → authoritative domain-plane activity
+ *  - danger (red)   → destructive effects and failures
+ */
+:root {
+  --background: #f8f9fa;
+  --surface: #ffffff;
+  --surface-muted: #f1f3f5;
+  --surface-raised: #ffffff;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --foreground: #111827;
+  --muted-foreground: #5a6472;
+  --faint-foreground: #667080;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-foreground: #ffffff;
+  --accent-soft: #eff6ff;
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-soft: #fef2f2;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  --warning: #92400e;
+  --warning-soft: #fffbeb;
+  --plane-view: #1d4ed8;
+  --plane-view-soft: #eff6ff;
+  --plane-domain: #92400e;
+  --plane-domain-soft: #fffbeb;
+  --ring: #2563eb;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: #0b0d10;
+  --surface: #14171c;
+  --surface-muted: #1a1e24;
+  --surface-raised: #1d2129;
+  --border: #262b33;
+  --border-strong: #343b45;
+  --foreground: #f3f4f6;
+  --muted-foreground: #a3adb8;
+  --faint-foreground: #8b95a1;
+  --accent: #60a5fa;
+  --accent-hover: #93c5fd;
+  --accent-foreground: #0b0d10;
+  --accent-soft: #172554;
+  --danger: #f87171;
+  --danger-hover: #fca5a5;
+  --danger-soft: #2a1214;
+  --success: #4ade80;
+  --success-soft: #0f2417;
+  --warning: #fbbf24;
+  --warning-soft: #2a2108;
+  --plane-view: #60a5fa;
+  --plane-view-soft: #14243d;
+  --plane-domain: #fbbf24;
+  --plane-domain-soft: #2b2210;
+  --ring: #60a5fa;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-plane-view: var(--plane-view);
+  --color-plane-view-soft: var(--plane-view-soft);
+  --color-plane-domain: var(--plane-domain);
+  --color-plane-domain-soft: var(--plane-domain-soft);
+  --color-ring: var(--ring);
+  --radius-md: var(--radius);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* One consistent, visible focus treatment everywhere. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Thin scrollbars inside panels (chat, inspector). */
+.dpas-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
