@@ -33,11 +33,22 @@ confirmation. One operation, one canonical identity, one execution path.
 
 ## Configure a live model (optional)
 
-Edit `.env`:
+**From the UI** — click the settings icon in the assistant panel (or
+“Connect”), paste an [OpenRouter](https://openrouter.ai/keys) key, pick a
+model. No restart. The key is held in the server process's memory: it is
+never written to disk, never returned to the browser (you only ever see
+`••••1234`), and never enters a client bundle — the agent loop runs
+server-side, so the browser never needs it. Restarting clears it.
+
+Because that key is shared by everyone hitting the same process, runtime
+entry is enabled in development and disabled in production builds unless you
+set `ALLOW_RUNTIME_MODEL_KEY=true`.
+
+**From `.env`** — the durable option for a deployment:
 
 ```bash
-MODEL_PROVIDER=anthropic   # or: openai
-ANTHROPIC_API_KEY=sk-...   # or: OPENAI_API_KEY=...
+MODEL_PROVIDER=openrouter    # or: anthropic · openai
+OPENROUTER_API_KEY=sk-or-... # or: ANTHROPIC_API_KEY / OPENAI_API_KEY
 ```
 
 Restart, then ask the assistant:

@@ -122,6 +122,49 @@ body {
   border-radius: 2px;
 }
 
+/*
+ * Tailwind v4's preflight follows the browser default (`cursor: default`) on
+ * buttons, unlike v3. Restore the affordance everywhere something is
+ * clickable — including Radix triggers, which render as buttons with roles.
+ */
+button,
+summary,
+label[for],
+select,
+a[href],
+[role="button"],
+[role="tab"],
+[role="option"],
+[role="menuitem"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+input[type="range"],
+input[type="color"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+[aria-disabled="true"],
+[data-disabled] {
+  cursor: not-allowed;
+}
+
+/* Resizable separator between the workspace and the assistant panel. */
+[data-separator] {
+  cursor: col-resize;
+}
+[data-separator][data-orientation="vertical"] {
+  cursor: row-resize;
+}
+
 ::selection {
   background: var(--accent-soft);
 }

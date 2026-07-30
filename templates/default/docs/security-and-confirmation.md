@@ -79,6 +79,28 @@ a person clicking in their own session has already expressed intent
 Confirmation evidence is an agent protocol, not a person protocol — the
 server treats both as ordinary authenticated requests.
 
+## Model credentials
+
+A model key can arrive two ways, and neither puts it in the browser:
+
+- **`.env`** — the durable option, read only in server code.
+- **The assistant panel's model settings** — posted once to
+  `POST /api/config/model` and held in
+  [src/server/model-config.ts](../src/server/model-config.ts), in that
+  process's memory. It is never written to disk, never copied into an env
+  var, never logged, and never serialized back: `GET /api/config` returns the
+  provider, the model id, and a masked hint (`••••1234`) only. Because the
+  agent loop runs server-side, the browser never needs the key at all.
+
+The guard that matters: one process shares that key with every visitor, so
+runtime entry is **enabled in development and disabled in production
+builds**. `ALLOW_RUNTIME_MODEL_KEY=true` opts a single-user deployment back
+in; `false` refuses everywhere. Tests pin all of this — the store's
+production guard and masking in
+[src/server/model-config.test.ts](../src/server/model-config.test.ts), and
+the endpoints' "never echo the key" contract in
+[src/app/api/config/config-routes.test.ts](../src/app/api/config/config-routes.test.ts).
+
 ## Boundaries worth keeping when you extend this
 
 - No secrets in `NEXT_PUBLIC_*`. Server env stays server-side

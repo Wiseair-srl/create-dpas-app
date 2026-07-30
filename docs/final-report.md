@@ -153,9 +153,9 @@ selection after approving, and execution fails with
 |---|---|
 | `pnpm lint` | clean (both packages) |
 | `pnpm typecheck` | clean, strict TS, no escape hatches on core contracts |
-| `pnpm test` | **57 passed** — 46 template (capabilities, demo, host, domain, protocol) + 11 CLI |
+| `pnpm test` | **72 passed** — 61 template (capabilities, demo, host, domain, protocol, model credentials) + 11 CLI |
 | `pnpm build` | Next.js production build ✓, CLI build + template sync ✓ |
-| `pnpm test:e2e` | **17 passed** — desktop (16) + mobile (1), incl. 4 axe scans |
+| `pnpm test:e2e` | **20 passed** — desktop (19) + mobile (1), incl. 4 axe scans |
 | `pnpm check:example` | 107 files match generator output |
 | `pnpm test:scaffold` | fresh app: install → lint → typecheck → 46 tests → build → 16 e2e, all green |
 | Bundle boundary | no `AUTH_SECRET`, `createHmac`, `@mastra`, `toAISDKTools`, `node:fs` in client chunks |
@@ -164,8 +164,9 @@ Coverage highlights: view discovery/invocation/StrictMode/lifecycle/staleness,
 hidden-vs-unavailable, contextual binding + locked fields, confirmation
 approve/deny/expiry/mismatch, authorization denial, catalog collision,
 protocol version mismatch, NDJSON framing across chunk boundaries, browser↔
-server dispatch, state reconciliation, correlation propagation, and the
-deterministic golden scenario — none requiring an LLM.
+server dispatch, state reconciliation, correlation propagation, runtime model
+credentials (production guard, masking, never echoed), and the deterministic
+golden scenario — none requiring an LLM.
 
 ## 7. Screenshots
 
@@ -193,7 +194,8 @@ implementation:
 
 Also recorded: published-package strategy (0001), the `ai@5` pin (0003), the
 zero-config JSON store (0004), the scripted model for credential-free CI
-(0006), and the server-signed demo identity (0007).
+(0006), the server-signed demo identity (0007), and runtime model credentials
+connected from the UI but held only in server memory (0008).
 
 ## 9. Known limitations
 

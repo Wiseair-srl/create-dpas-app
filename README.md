@@ -43,8 +43,10 @@ developer Agent Inspector (live catalog · correlated timeline · architecture
 map), light/dark themes, and a test suite that never needs a model — e2e runs
 the real Mastra pipeline under a scripted `LanguageModelV2`.
 
-Configure a live model whenever you like: set `MODEL_PROVIDER=anthropic` or
-`openai` plus the matching API key in `.env`.
+Connect a live model whenever you like — paste an OpenRouter key straight
+into the assistant panel (held in server memory, never returned to the
+browser, never written to disk), or set `MODEL_PROVIDER` plus the matching
+API key in `.env` for a deployment.
 
 ## CLI
 

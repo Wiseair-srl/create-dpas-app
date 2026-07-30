@@ -1,7 +1,7 @@
 "use client";
 
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
-import { Bot, Play, RotateCcw, ScanSearch, Square } from "lucide-react";
+import { Bot, KeyRound, Play, RotateCcw, ScanSearch, Settings2, Square } from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useMessageStore } from "@/agent/experience/message-store";
 import { useDpasAssistantRuntime } from "@/agent/experience/runtime-adapter";
 import { startLiveTurn, cancelActiveTurn } from "@/agent/experience/turn-controller";
 import { InspectorPanel } from "@/components/agent-inspector/inspector-panel";
+import { ModelSettingsDialog } from "./model-settings";
 import { AssistantComposer, AssistantThread } from "./thread";
 
 /**
@@ -22,12 +23,14 @@ import { AssistantComposer, AssistantThread } from "./thread";
  */
 export function AssistantPanel() {
   const [tab, setTab] = useState<"chat" | "inspector">("chat");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const config = useAppConfig();
   const running = useMessageStore((state) => state.running);
   const resetThread = useMessageStore((state) => state.reset);
   const demoAbort = useRef<AbortController | null>(null);
 
   const live = config.data?.live ?? false;
+  const canConnect = config.data?.runtimeConfigurable ?? false;
   const runtime = useDpasAssistantRuntime({ liveEnabled: live });
 
   const startDemo = () => {
@@ -53,7 +56,18 @@ export function AssistantPanel() {
         <Badge variant={live ? "view" : "neutral"} data-testid="assistant-mode">
           {config.data?.label ?? "…"}
         </Badge>
-        <div className="ml-auto flex items-center gap-1" role="tablist" aria-label="Assistant panels">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto h-7 w-7 text-muted-foreground"
+          aria-label="Model settings"
+          title="Model settings"
+          data-testid="open-model-settings"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings2 aria-hidden className="h-4 w-4" />
+        </Button>
+        <div className="flex items-center gap-1" role="tablist" aria-label="Assistant panels">
           <TabButton active={tab === "chat"} onClick={() => setTab("chat")} id="chat">
             Chat
           </TabButton>
@@ -98,15 +112,30 @@ export function AssistantPanel() {
                 onStop={stop}
               />
             ) : (
-              <p className="border-t border-border px-3 py-2.5 text-[11px] leading-4 text-muted-foreground">
-                Free-form chat needs a model: set <code className="font-mono">MODEL_PROVIDER</code>{" "}
-                and an API key in <code className="font-mono">.env</code>, then restart. The guided
-                demo works without any of that.
-              </p>
+              <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
+                <p className="flex-1 text-[11px] leading-4 text-muted-foreground">
+                  {canConnect
+                    ? "Free-form chat needs a model. Connect an OpenRouter key — the guided demo works without one."
+                    : "Free-form chat needs a model: set MODEL_PROVIDER and an API key in .env, then restart. The guided demo works without any of that."}
+                </p>
+                {canConnect ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setSettingsOpen(true)}
+                    data-testid="connect-model"
+                  >
+                    <KeyRound aria-hidden className="h-3.5 w-3.5" />
+                    Connect
+                  </Button>
+                ) : null}
+              </div>
             )}
           </div>
         </AssistantRuntimeProvider>
       )}
+
+      <ModelSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </section>
   );
 }

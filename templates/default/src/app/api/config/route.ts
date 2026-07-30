@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { resolveModelConfig } from "@/agent/runtime/mastra";
+import { describeModelConfig } from "@/agent/runtime/mastra";
 
-/** Which assistant modes this deployment supports (never exposes secrets). */
+/**
+ * Which assistant modes this deployment supports. Reports where the
+ * credential came from and a masked hint when one is connected — never the
+ * key itself.
+ */
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  const model = resolveModelConfig();
-  return NextResponse.json({
-    provider: model.provider,
-    label: model.label,
-    live: model.live,
-  });
+  return NextResponse.json(describeModelConfig());
 }

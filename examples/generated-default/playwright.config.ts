@@ -38,6 +38,9 @@ export default defineConfig({
     timeout: 300_000,
     env: {
       MODEL_PROVIDER: "mock",
+      // The production build defaults runtime key entry off; the model-settings
+      // spec covers the opt-in path a local operator would use.
+      ALLOW_RUNTIME_MODEL_KEY: "true",
       DPAS_DATA_DIR: path.join(import.meta.dirname, "test-results", ".data-e2e"),
     },
   },
