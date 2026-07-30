@@ -53,6 +53,7 @@ export async function startLiveTurn(text: string): Promise<void> {
       signal: abort.signal,
       events: {
         onTextDelta: (delta) => useMessageStore.getState().appendAssistantText(delta),
+        onReasoningDelta: (delta) => useMessageStore.getState().appendReasoning(delta),
         onToolCall: (call) =>
           useMessageStore.getState().upsertToolCall({
             toolCallId: call.toolCallId,

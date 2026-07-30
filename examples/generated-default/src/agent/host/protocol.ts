@@ -67,6 +67,8 @@ export type ChatStepFrame =
       domainTools: DomainToolInfo[];
     }
   | { type: "text-delta"; text: string }
+  /** Model reasoning, kept separate from the answer so the UI can fold it. */
+  | { type: "reasoning-delta"; text: string }
   | {
       type: "tool-call";
       toolCallId: string;

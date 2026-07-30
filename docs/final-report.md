@@ -153,7 +153,7 @@ selection after approving, and execution fails with
 |---|---|
 | `pnpm lint` | clean (both packages) |
 | `pnpm typecheck` | clean, strict TS, no escape hatches on core contracts |
-| `pnpm test` | **72 passed** — 61 template (capabilities, demo, host, domain, protocol, model credentials) + 11 CLI |
+| `pnpm test` | **86 passed** — 75 template (capabilities, demo, host, domain, protocol, model credentials, text sanitizing) + 11 CLI |
 | `pnpm build` | Next.js production build ✓, CLI build + template sync ✓ |
 | `pnpm test:e2e` | **20 passed** — desktop (19) + mobile (1), incl. 4 axe scans |
 | `pnpm check:example` | 107 files match generator output |
@@ -194,8 +194,30 @@ implementation:
 
 Also recorded: published-package strategy (0001), the `ai@5` pin (0003), the
 zero-config JSON store (0004), the scripted model for credential-free CI
-(0006), the server-signed demo identity (0007), and runtime model credentials
-connected from the UI but held only in server memory (0008).
+(0006), the server-signed demo identity (0007), runtime model credentials
+connected from the UI but held only in server memory (0008), and the host
+answering server tool calls Mastra leaves open (0009).
+
+### What a live model found that the tests did not
+
+Three defects surfaced only once a real OpenRouter key drove the app, and
+each is now pinned by a test:
+
+1. **Gateway model ids.** Mastra strips the leading provider segment, so a
+   bare `anthropic/claude-sonnet-4.5` reached OpenRouter as
+   `claude-sonnet-4.5` and every run failed with "No endpoints found that
+   support tool use". Ids are normalized to the `openrouter/…` gateway form.
+2. **Orphaned server tool calls (ADR-0009).** A model that calls a server
+   tool and a client tool in one message made Mastra execute the server tool
+   and then discard its result. The card hung on "running" and the history
+   carried an unanswered tool-call, which providers reject.
+3. **Rich text.** Answers are markdown and reasoning is a separate stream;
+   both were being shown as raw text, including leaked `<|channel|>` markers.
+
+The common cause of all three going unnoticed: the scripted CI model was
+*too well behaved* — it never batched tool calls, never emitted reasoning,
+never used markdown. It now does all three, so these paths run on every CI
+execution.
 
 ## 9. Known limitations
 

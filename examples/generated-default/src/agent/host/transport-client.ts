@@ -32,6 +32,7 @@ const MAX_IDENTICAL_FAILURES = 3;
 
 export interface TurnEvents {
   onTextDelta: (text: string) => void;
+  onReasoningDelta: (text: string) => void;
   onToolCall: (call: {
     toolCallId: string;
     wireName: string;
@@ -243,6 +244,9 @@ async function consumeStepStream(
         break;
       case "text-delta":
         events.onTextDelta(frame.text);
+        break;
+      case "reasoning-delta":
+        events.onReasoningDelta(frame.text);
         break;
       case "tool-call":
         if (frame.executor === "server") {

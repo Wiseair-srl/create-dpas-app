@@ -101,6 +101,16 @@ export async function handleChatStep(request: Request): Promise<Response> {
     ]),
   );
 
+  // Record every domain result as it is produced. When one assistant message
+  // calls a server tool AND a client tool, the run suspends for the browser
+  // and Mastra drops the server tool's result — it never reaches `fullStream`
+  // or `stream.toolResults`, even though the procedure ran. Capturing here
+  // lets the host answer that call itself (see settleOrphanedServerCalls);
+  // without it the tool-call would go unanswered, which strands the UI card
+  // and leaves the model a malformed history.
+  const domainResults = new Map<string, ToolExecutionRecord>();
+  const recordedDomainTools = withResultCapture(domainTools, domainResults);
+
   const stepId = newStepId();
   const encoder = new TextEncoder();
 
@@ -143,7 +153,7 @@ export async function handleChatStep(request: Request): Promise<Response> {
         });
 
         const run = await agent.stream(step.messages as ModelMessage[], {
-          toolsets: { domain: domainTools },
+          toolsets: { domain: recordedDomainTools },
           clientTools,
           maxSteps: RUN_LIMITS.maxStepsPerRequest,
         });
@@ -175,6 +185,13 @@ export async function handleChatStep(request: Request): Promise<Response> {
                 accumulator.text(text);
                 write({ type: "text-delta", text });
               }
+              break;
+            }
+            case "reasoning-delta": {
+              // Reasoning is shown separately and never fed back to the
+              // model, so it stays out of the reconstructed history.
+              const text = String(chunk.payload?.text ?? "");
+              if (text) write({ type: "reasoning-delta", text });
               break;
             }
             case "tool-call": {
@@ -242,6 +259,19 @@ export async function handleChatStep(request: Request): Promise<Response> {
         });
       } finally {
         accumulator.flush();
+        // Answer any server tool call Mastra left unresolved, so the model
+        // never sees a tool-call without a tool-result and the browser card
+        // never hangs on "running".
+        for (const settled of settleOrphanedServerCalls(accumulator, domainResults)) {
+          write({
+            type: "tool-result",
+            toolCallId: settled.toolCallId,
+            wireName: settled.wireName,
+            canonicalId: canonicalIdFromWireName(settled.wireName) ?? settled.wireName,
+            ok: settled.ok,
+            result: settled.result,
+          });
+        }
         write({
           type: "step-finish",
           stepId,
@@ -279,11 +309,95 @@ interface AccumulatedToolCall {
   resolved: boolean;
 }
 
+export type ToolExecutionRecord =
+  | { ok: true; result: unknown }
+  | { ok: false; result: unknown };
+
+/**
+ * Wrap each domain tool so the host keeps the result it produced, keyed by
+ * tool-call id. Purely observational: execution, authorization and audit all
+ * still happen inside the orpc-agent runtime that `toAISDKTools` built.
+ */
+export function withResultCapture(
+  tools: ToolSet,
+  into: Map<string, ToolExecutionRecord>,
+): ToolSet {
+  return Object.fromEntries(
+    Object.entries(tools).map(([name, definition]) => {
+      const execute = definition.execute;
+      if (typeof execute !== "function") return [name, definition];
+      return [
+        name,
+        {
+          ...definition,
+          execute: async (input: never, options: never) => {
+            const toolCallId = (options as { toolCallId?: string } | undefined)?.toolCallId;
+            try {
+              const result = await execute(input, options);
+              if (toolCallId) into.set(toolCallId, { ok: true, result });
+              return result;
+            } catch (error) {
+              if (toolCallId) {
+                into.set(toolCallId, {
+                  ok: false,
+                  result: { error: { code: "EXECUTION_FAILED", message: sanitizeModelError(error) } },
+                });
+              }
+              throw error;
+            }
+          },
+        },
+      ];
+    }),
+  ) as ToolSet;
+}
+
+export interface SettledServerCall {
+  toolCallId: string;
+  wireName: string;
+  ok: boolean;
+  result: unknown;
+}
+
+/**
+ * Give every unresolved SERVER tool call an answer, recording it in the
+ * message history too. A call with no captured result never ran, which the
+ * model is told plainly so it can retry rather than assume success.
+ */
+export function settleOrphanedServerCalls(
+  accumulator: ResponseAccumulator,
+  recorded: ReadonlyMap<string, ToolExecutionRecord>,
+): SettledServerCall[] {
+  const settled: SettledServerCall[] = [];
+  for (const call of accumulator.unresolvedServerCalls()) {
+    const record = recorded.get(call.toolCallId);
+    const outcome: SettledServerCall = record
+      ? { toolCallId: call.toolCallId, wireName: call.wireName, ok: record.ok, result: record.result }
+      : {
+          toolCallId: call.toolCallId,
+          wireName: call.wireName,
+          ok: false,
+          result: {
+            error: {
+              code: "TOOL_NOT_EXECUTED",
+              message: "The run ended before this tool produced a result. Call it again.",
+              retry: "yes",
+            },
+          },
+        };
+    accumulator.toolResult(outcome.toolCallId, outcome.wireName, outcome.result);
+    settled.push(outcome);
+  }
+  return settled;
+}
+
+export type ResponseAccumulator = ReturnType<typeof createResponseAccumulator>;
+
 /**
  * Rebuilds the ModelMessages a run produced so the stateless browser can
  * carry the full conversation into the next step.
  */
-function createResponseAccumulator() {
+export function createResponseAccumulator() {
   const messages: WireModelMessage[] = [];
   const calls: AccumulatedToolCall[] = [];
   let currentText = "";
@@ -338,6 +452,9 @@ function createResponseAccumulator() {
     },
     pendingBrowserCalls() {
       return calls.filter((call) => call.executor === "browser" && !call.resolved);
+    },
+    unresolvedServerCalls() {
+      return calls.filter((call) => call.executor === "server" && !call.resolved);
     },
   };
 }

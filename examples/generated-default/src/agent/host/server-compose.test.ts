@@ -3,6 +3,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ChatStepFrame, WireModelMessage, WireToolDescriptor } from "./protocol";
+import {
+  createResponseAccumulator,
+  settleOrphanedServerCalls,
+  withResultCapture,
+  type ToolExecutionRecord,
+} from "./server-compose";
 
 /**
  * Server half of the Agent Host, exercised through real Request/Response
@@ -63,6 +69,94 @@ async function readFrames(response: Response): Promise<ChatStepFrame[]> {
     .map((line) => JSON.parse(line) as ChatStepFrame);
 }
 
+/**
+ * Regression: when one assistant message calls a SERVER tool and a CLIENT
+ * tool, Mastra executes the server tool but suspends the run for the browser
+ * and never emits that result — it is absent from `fullStream` AND from
+ * `stream.toolResults`. Left alone, the model receives a tool-call with no
+ * tool-result (providers reject that, and the run stalls) and the browser
+ * shows a card stuck on "running" forever.
+ */
+describe("orphaned server tool calls", () => {
+  it("answers an unresolved server call with the captured result", () => {
+    const accumulator = createResponseAccumulator();
+    accumulator.toolCall("call_server", "domain_devices__list", { city: "Turin" }, "server");
+    accumulator.toolCall("call_client", "view_devices__filters__set", {}, "browser");
+
+    const recorded = new Map<string, ToolExecutionRecord>([
+      ["call_server", { ok: true, result: { devices: [{ id: "d-to-03" }], total: 1 } }],
+    ]);
+
+    const settled = settleOrphanedServerCalls(accumulator, recorded);
+    expect(settled).toEqual([
+      {
+        toolCallId: "call_server",
+        wireName: "domain_devices__list",
+        ok: true,
+        result: { devices: [{ id: "d-to-03" }], total: 1 },
+      },
+    ]);
+
+    // The history now answers the server call, and the client call is still
+    // the browser's to execute.
+    const toolMessages = accumulator.messages().filter((message) => message.role === "tool");
+    expect(toolMessages).toHaveLength(1);
+    expect(toolMessages[0]!.content).toMatchObject([
+      { type: "tool-result", toolCallId: "call_server" },
+    ]);
+    expect(accumulator.pendingBrowserCalls().map((c) => c.toolCallId)).toEqual(["call_client"]);
+  });
+
+  it("tells the model plainly when a server call never ran", () => {
+    const accumulator = createResponseAccumulator();
+    accumulator.toolCall("call_server", "domain_devices__list", {}, "server");
+    const settled = settleOrphanedServerCalls(accumulator, new Map());
+    expect(settled[0]).toMatchObject({
+      ok: false,
+      result: { error: { code: "TOOL_NOT_EXECUTED", retry: "yes" } },
+    });
+  });
+
+  it("leaves calls Mastra already resolved alone", () => {
+    const accumulator = createResponseAccumulator();
+    accumulator.toolCall("call_server", "domain_devices__list", {}, "server");
+    accumulator.toolResult("call_server", "domain_devices__list", { total: 0 });
+    expect(settleOrphanedServerCalls(accumulator, new Map())).toEqual([]);
+  });
+
+  it("captures results and failures from the wrapped domain toolset", async () => {
+    const recorded = new Map<string, ToolExecutionRecord>();
+    const wrapped = withResultCapture(
+      {
+        good: {
+          description: "d",
+          inputSchema: { type: "object" },
+          execute: async () => ({ total: 2 }),
+        },
+        bad: {
+          description: "d",
+          inputSchema: { type: "object" },
+          execute: async () => {
+            throw new Error("boom");
+          },
+        },
+        declarationOnly: { description: "d", inputSchema: { type: "object" } },
+      } as never,
+      recorded,
+    );
+
+    await wrapped.good!.execute!({} as never, { toolCallId: "c1" } as never);
+    await expect(
+      wrapped.bad!.execute!({} as never, { toolCallId: "c2" } as never),
+    ).rejects.toThrow("boom");
+
+    expect(recorded.get("c1")).toEqual({ ok: true, result: { total: 2 } });
+    expect(recorded.get("c2")).toMatchObject({ ok: false });
+    // An execute-less declaration passes through untouched.
+    expect(wrapped.declarationOnly!.execute).toBeUndefined();
+  });
+});
+
 describe("chat step composition", () => {
   it("streams the composed catalog, suspends at the frontend tool, and reconstructs messages", async () => {
     const response = await handleChatStep(request(stepBody()));
@@ -82,12 +176,28 @@ describe("chat step composition", () => {
       ]);
     }
 
-    const toolCall = frames.find((f) => f.type === "tool-call");
-    expect(toolCall).toMatchObject({
-      executor: "browser",
-      canonicalId: "view:devices.filters.set",
-      input: { status: "offline", city: "Milan" },
-    });
+    // The model batches a server tool and a client tool in one message.
+    const toolCalls = frames.filter((f) => f.type === "tool-call");
+    expect(toolCalls).toMatchObject([
+      { executor: "server", canonicalId: "domain:devices.list" },
+      {
+        executor: "browser",
+        canonicalId: "view:devices.filters.set",
+        input: { status: "offline", city: "Milan" },
+      },
+    ]);
+
+    // Mastra drops the server result when the run suspends; the host answers
+    // that call itself, so the browser still gets a matching tool-result.
+    const domainResult = frames.find(
+      (f) => f.type === "tool-result" && f.canonicalId === "domain:devices.list",
+    );
+    expect(domainResult).toBeDefined();
+    if (domainResult?.type === "tool-result") {
+      expect(domainResult.ok).toBe(true);
+      // orpc-agent's model-facing envelope: { status, data }.
+      expect(domainResult.result).toMatchObject({ status: "ok", data: { total: 3 } });
+    }
 
     const finish = frames.find((f) => f.type === "step-finish");
     expect(finish).toBeDefined();
@@ -97,6 +207,14 @@ describe("chat step composition", () => {
       expect(finish.pendingToolCalls[0]).toMatchObject({
         wireName: "view_devices__filters__set",
       });
+      // Every server tool-call is answered in the history, so the model never
+      // sees an unresolved call (providers reject that shape).
+      const answered = finish.responseMessages
+        .filter((m) => m.role === "tool")
+        .flatMap((m) => m.content as Array<Record<string, unknown>>)
+        .map((part) => part.toolName);
+      expect(answered).toContain("domain_devices__list");
+
       // Reconstructed suffix: assistant text + the pending tool call.
       const assistant = finish.responseMessages.find((m) => m.role === "assistant");
       expect(assistant).toBeDefined();

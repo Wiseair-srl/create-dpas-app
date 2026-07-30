@@ -58,6 +58,16 @@ capabilityId (canonical id) · confirmationId?`.
    fresh server data. The demo then re-reads the table state and reports the
    VERIFIED outcome — never an assumed one.
 
+## Batched tool calls
+
+A model often calls several tools in one message — sometimes a server tool
+and a browser tool together. When that happens Mastra runs the server tool
+but suspends the step for the browser without reporting the server result, so
+the Agent Host answers that call from the result it captured while the tool
+ran. In the timeline you will still see a matching `tool-result` for every
+`tool-call`; if a call could not be answered at all, the model receives
+`TOOL_NOT_EXECUTED` with `retry: "yes"` rather than silence.
+
 ## Reading failures
 
 Failures are typed results, not exceptions, and each carries a retry hint:
