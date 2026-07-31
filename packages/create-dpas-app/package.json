@@ -4,6 +4,13 @@
   "description": "Scaffold a Dual-Plane Agent Stack (DPAS) application: Agent Surface + oRPC Agent + Mastra + assistant-ui.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wiseair-srl/create-dpas-app.git",
+    "directory": "packages/create-dpas-app"
+  },
+  "homepage": "https://github.com/Wiseair-srl/create-dpas-app#readme",
+  "bugs": "https://github.com/Wiseair-srl/create-dpas-app/issues",
   "engines": {
     "node": ">=22.13.0"
   },
