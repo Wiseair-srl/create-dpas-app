@@ -12,7 +12,19 @@ import type { LanguageModelV2, LanguageModelV2CallOptions } from "@ai-sdk/provid
 
 type StreamPart = Record<string, unknown>;
 
-const usage = { inputTokens: 16, outputTokens: 16, totalTokens: 32 };
+/**
+ * `reasoningTokens` and `cachedInputTokens` are SUBSETS of output and input,
+ * exactly as a real provider reports them — this model streams reasoning, so
+ * it bills some, and the numbers stay inside their parents so anything that
+ * adds them instead of nesting them shows up as wrong.
+ */
+const usage = {
+  inputTokens: 16,
+  outputTokens: 16,
+  totalTokens: 32,
+  reasoningTokens: 4,
+  cachedInputTokens: 8,
+};
 
 function streamOf(parts: StreamPart[]): ReadableStream<StreamPart> {
   return new ReadableStream({

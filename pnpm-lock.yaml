@@ -49,14 +49,14 @@ importers:
   templates/default:
     dependencies:
       '@agent-surface/core':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.6.0
+        version: 0.6.0
       '@agent-surface/orpc':
-        specifier: ^0.3.0
-        version: 0.3.0(@agent-surface/react@0.3.0(react@19.2.8))(react@19.2.8)
+        specifier: ^0.5.1
+        version: 0.5.1(@agent-surface/react@0.5.1(react@19.2.8))(react@19.2.8)
       '@agent-surface/react':
-        specifier: ^0.3.0
-        version: 0.3.0(react@19.2.8)
+        specifier: ^0.5.1
+        version: 0.5.1(react@19.2.8)
       '@assistant-ui/react':
         specifier: ^0.15.1
         version: 0.15.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -128,8 +128,8 @@ importers:
         version: 5.0.14(@types/react@19.2.17)(react@19.2.8)
     devDependencies:
       '@agent-surface/testing':
-        specifier: ^0.3.0
-        version: 0.3.0(@agent-surface/react@0.3.0(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
+        specifier: ^0.5.1
+        version: 0.5.1(@agent-surface/react@0.5.1(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
       '@ai-sdk/provider':
         specifier: ^2.0.3
         version: 2.0.3
@@ -205,12 +205,12 @@ packages:
       express:
         optional: true
 
-  '@agent-surface/core@0.3.0':
-    resolution: {integrity: sha512-v0vUu4P6Jl4dJj+lHmpNdTGftgF8BD03VEvKqAa4NIB7SFHiJMgJjp27EZR6qA4T6hh8jpYMU+lBeCQvCNoZgQ==}
+  '@agent-surface/core@0.6.0':
+    resolution: {integrity: sha512-+Cj6V9VMJoldfd2y2zTH7QKd7aj9jOsyOeiWqeMDwfGCKjUuOx7NFG9CpGZ5i5ocWQGn2SeRx7C++y4ME/dO1Q==}
     engines: {node: '>=20.19.0'}
 
-  '@agent-surface/orpc@0.3.0':
-    resolution: {integrity: sha512-DqVsbHV82ffUYqMS1rl5LVEirsW8JvkOEXuva2XOWM/+CzGlTrtueiLakeqzTe61VAR7jc43YKGCKvJL4qj6Jg==}
+  '@agent-surface/orpc@0.5.1':
+    resolution: {integrity: sha512-MfQL73twQ22jt8pJbKmcYsP4Vjx3Gt3OBDpfwgQuABLmjUKovjHvMcqV7qzCN1zC7XCqs8FgrF4R2KpgYRkj0Q==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@agent-surface/react': '>=0.1.0'
@@ -221,14 +221,14 @@ packages:
       react:
         optional: true
 
-  '@agent-surface/react@0.3.0':
-    resolution: {integrity: sha512-z3zwoOmmPe8SK7pHa3XBh7zZzGWCoQq1sqaW81rhoROZbNd6lqJhWAR1xkPzys8G3R9fkbFPV+qt8FAZXjvcqA==}
+  '@agent-surface/react@0.5.1':
+    resolution: {integrity: sha512-kIWVDfNRYV4tWCza6Ow8163e6FWub6DVSEQ+74Y/qAc5/PFxSVK57SK/To69vjI9m1PLQYy+q1PieGb8eeMmAQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       react: '>=18.2'
 
-  '@agent-surface/testing@0.3.0':
-    resolution: {integrity: sha512-vbel/SBtkUWEtHFFwSgEoLwxOhL70GUAikWsZ1O9qmJ+iotg+ocftHWjew609eiuhxEb+eQPECG2M0Oyy+AUdw==}
+  '@agent-surface/testing@0.5.1':
+    resolution: {integrity: sha512-E9IBS7yL5bTZMU/Pp3h2Hc24gIjlWOtASX09BLQrm1oZMPXraxHacamkzq3tDsI1JujOjnmO+165YqD3mPlvlQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@agent-surface/react': '>=0.1.0'
@@ -5560,25 +5560,25 @@ snapshots:
     optionalDependencies:
       express: 5.2.1
 
-  '@agent-surface/core@0.3.0': {}
+  '@agent-surface/core@0.6.0': {}
 
-  '@agent-surface/orpc@0.3.0(@agent-surface/react@0.3.0(react@19.2.8))(react@19.2.8)':
+  '@agent-surface/orpc@0.5.1(@agent-surface/react@0.5.1(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@agent-surface/core': 0.3.0
+      '@agent-surface/core': 0.6.0
     optionalDependencies:
-      '@agent-surface/react': 0.3.0(react@19.2.8)
+      '@agent-surface/react': 0.5.1(react@19.2.8)
       react: 19.2.8
 
-  '@agent-surface/react@0.3.0(react@19.2.8)':
+  '@agent-surface/react@0.5.1(react@19.2.8)':
     dependencies:
-      '@agent-surface/core': 0.3.0
+      '@agent-surface/core': 0.6.0
       react: 19.2.8
 
-  '@agent-surface/testing@0.3.0(@agent-surface/react@0.3.0(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)':
+  '@agent-surface/testing@0.5.1(@agent-surface/react@0.5.1(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@agent-surface/core': 0.3.0
+      '@agent-surface/core': 0.6.0
     optionalDependencies:
-      '@agent-surface/react': 0.3.0(react@19.2.8)
+      '@agent-surface/react': 0.5.1(react@19.2.8)
       '@testing-library/react': 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react: 19.2.8
 
@@ -8799,8 +8799,8 @@ snapshots:
       '@next/eslint-plugin-next': 16.2.12
       eslint: 9.39.5(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.5(jiti@2.7.0))
-      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0))
+      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.39.5(jiti@2.7.0))
       eslint-plugin-react: 7.37.5(eslint@9.39.5(jiti@2.7.0))
       eslint-plugin-react-hooks: 7.1.1(eslint@9.39.5(jiti@2.7.0))
@@ -8822,7 +8822,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.5(jiti@2.7.0)):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3
@@ -8833,21 +8833,21 @@ snapshots:
       tinyglobby: 0.2.17
       unrs-resolver: 1.12.2
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0))
+      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0))
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0)):
+  eslint-module-utils@2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       eslint: 9.39.5(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.5(jiti@2.7.0))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0))
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0)):
+  eslint-plugin-import@2.32.0(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -8858,7 +8858,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.5(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-module-utils: 2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0))
+      eslint-module-utils: 2.14.0(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0)))(eslint@9.39.5(jiti@2.7.0))
       hasown: 2.0.4
       is-core-module: 2.16.2
       is-glob: 4.0.3

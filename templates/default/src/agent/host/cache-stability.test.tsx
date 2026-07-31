@@ -45,7 +45,6 @@ function project(rendered: RenderedAgentSurface) {
     consumer: HOST_CONSUMER,
     topology: "remote",
     confirmations: "wait",
-    descriptionIncludesState: false,
   });
   const projection = buildFrontendToolDescriptors(
     toolset,

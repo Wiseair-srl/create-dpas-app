@@ -5,6 +5,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ChatStepFrame, WireModelMessage, WireToolDescriptor } from "./protocol";
 import {
   createResponseAccumulator,
+  createUsageAccumulator,
   settleOrphanedServerCalls,
   withResultCapture,
   type ToolExecutionRecord,
@@ -154,6 +155,118 @@ describe("orphaned server tool calls", () => {
     expect(recorded.get("c2")).toMatchObject({ ok: false });
     // An execute-less declaration passes through untouched.
     expect(wrapped.declarationOnly!.execute).toBeUndefined();
+  });
+});
+
+/**
+ * The runtime reports token usage twice: per model step, and again as a run
+ * total on the closing `finish`. Both are legitimate; adding them together is
+ * not, and a counter that silently doubles is worse than no counter.
+ */
+describe("token usage accounting", () => {
+  const step = (inputTokens: number, outputTokens: number) => ({
+    output: { usage: { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens } },
+  });
+
+  it("does not add the run total on top of the steps it already summed", () => {
+    const usage = createUsageAccumulator();
+    usage.step(step(10, 4));
+    usage.step(step(20, 6));
+    // The run total the runtime emits is those two, already added up.
+    usage.finish(step(30, 10));
+
+    expect(usage.value()).toEqual({
+      inputTokens: 30,
+      outputTokens: 10,
+      totalTokens: 40,
+      reportedSteps: 2,
+    });
+  });
+
+  it("keeps the partial sum when the run ends without a total", () => {
+    // Timeout, error and abort all end the stream before `finish`. Those
+    // tokens were spent, so they still have to be reported.
+    const usage = createUsageAccumulator();
+    usage.step(step(10, 4));
+    usage.step(step(20, 6));
+
+    expect(usage.value()).toMatchObject({ inputTokens: 30, outputTokens: 10, reportedSteps: 2 });
+  });
+
+  it("reports nothing at all when the provider reported nothing", () => {
+    const usage = createUsageAccumulator();
+    usage.step({ output: {} });
+    usage.step({ output: { usage: { promptTokens: 12 } } });
+    usage.finish(undefined);
+
+    // Undefined, never a zero: "0 tokens" and "not measured" are different
+    // claims, and only one of them is true here.
+    expect(usage.value()).toBeUndefined();
+  });
+
+  it("accepts the alternative fields a runtime may fill instead", () => {
+    const fromTotalUsage = createUsageAccumulator();
+    fromTotalUsage.step({ totalUsage: { inputTokens: 7, outputTokens: 3, totalTokens: 10 } });
+    expect(fromTotalUsage.value()).toMatchObject({ inputTokens: 7, outputTokens: 3 });
+
+    const bare = createUsageAccumulator();
+    bare.step({ usage: { inputTokens: 5, outputTokens: 2 } });
+    // No total reported, so it is the parts added up.
+    expect(bare.value()).toMatchObject({ outputTokens: 2, totalTokens: 7 });
+  });
+
+  it("ignores counts that are not counts", () => {
+    const usage = createUsageAccumulator();
+    usage.step({ output: { usage: { inputTokens: -5, outputTokens: Number.NaN, totalTokens: 9 } } });
+    expect(usage.value()).toMatchObject({ inputTokens: 0, outputTokens: 0, totalTokens: 9 });
+  });
+
+  it("keeps reasoning and cached input as subsets, never as additions", () => {
+    // Reasoning bills AS output and is already inside it; cached input is
+    // already inside the input. Anything that adds them reports tokens nobody
+    // is charged for.
+    const usage = createUsageAccumulator();
+    usage.step({
+      output: {
+        usage: {
+          inputTokens: 100,
+          outputTokens: 40,
+          totalTokens: 140,
+          cachedInputTokens: 60,
+          reasoningTokens: 25,
+        },
+      },
+    });
+
+    const value = usage.value();
+    expect(value).toMatchObject({ inputTokens: 100, outputTokens: 40, totalTokens: 140 });
+    expect(value!.cachedInputTokens).toBeLessThanOrEqual(value!.inputTokens);
+    expect(value!.reasoningTokens).toBeLessThanOrEqual(value!.outputTokens);
+    expect(value).toMatchObject({ cachedInputTokens: 60, reasoningTokens: 25 });
+  });
+
+  it("leaves a subset absent when the provider never mentioned it", () => {
+    // Absent is not zero: a model that reports no reasoning figure is not a
+    // model that provably did none.
+    const usage = createUsageAccumulator();
+    usage.step(step(10, 4));
+    expect(usage.value()).not.toHaveProperty("reasoningTokens");
+    expect(usage.value()).not.toHaveProperty("cachedInputTokens");
+  });
+
+  it("does not let a silent step zero out a subset another step reported", () => {
+    const usage = createUsageAccumulator();
+    usage.step({ output: { usage: { inputTokens: 10, outputTokens: 4, reasoningTokens: 3 } } });
+    usage.step(step(10, 4));
+    expect(usage.value()).toMatchObject({ outputTokens: 8, reasoningTokens: 3 });
+  });
+
+  it("carries a provider total that exceeds input + output", () => {
+    // Reasoning and other overhead land in the total; recomputing it as a sum
+    // would quietly under-report what gets billed.
+    const usage = createUsageAccumulator();
+    usage.step({ output: { usage: { inputTokens: 10, outputTokens: 5, totalTokens: 40 } } });
+    expect(usage.value()).toMatchObject({ totalTokens: 40 });
   });
 });
 
@@ -332,6 +445,37 @@ describe("chat step composition", () => {
     expect(notice).toBeDefined();
     expect(notice && "data" in notice ? notice.data : undefined).toMatchObject({
       capabilityIds: ["domain:devices.list"],
+    });
+  });
+
+  it("reports what the step cost, once, on the finish frame", async () => {
+    const response = await handleChatStep(request(stepBody()));
+    const frames = await readFrames(response);
+
+    const finish = frames.find((f) => f.type === "step-finish");
+    expect(finish).toBeDefined();
+    if (finish?.type === "step-finish") {
+      // The scripted model bills 16/16 per model step (ADR-0006). This request
+      // suspends after one, so it is exactly one step's worth — proof the run
+      // total did not get added on top of it.
+      expect(finish.usage).toEqual({
+        inputTokens: 16,
+        outputTokens: 16,
+        totalTokens: 32,
+        // Subsets, so they stay INSIDE their parents rather than adding to them.
+        cachedInputTokens: 8,
+        reasoningTokens: 4,
+        reportedSteps: 1,
+      });
+    }
+
+    // And it reaches the inspector, so the cost of a step is traceable next to
+    // the catalog that produced it.
+    const traced = frames.find((f) => f.type === "inspector" && f.eventType === "model.usage");
+    expect(traced).toBeDefined();
+    expect(traced && "data" in traced ? traced.data : undefined).toMatchObject({
+      inputTokens: 16,
+      outputTokens: 16,
     });
   });
 

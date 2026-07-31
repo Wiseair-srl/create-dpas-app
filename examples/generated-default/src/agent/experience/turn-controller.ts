@@ -36,6 +36,7 @@ export async function startLiveTurn(text: string): Promise<void> {
 
   store.appendUser(text);
   store.setRunning("live");
+  store.beginTurnUsage();
 
   const history = [
     ...store.modelMessages,
@@ -90,6 +91,7 @@ export async function startLiveTurn(text: string): Promise<void> {
             ),
           );
         },
+        onUsage: (usage) => useMessageStore.getState().addUsage(usage),
         onAssistantMessageBoundary: () => useMessageStore.getState().sealAssistantText(),
         onError: (error) =>
           useMessageStore

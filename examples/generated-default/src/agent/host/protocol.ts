@@ -208,6 +208,52 @@ export interface DomainToolInfo {
   requiresApproval: boolean;
 }
 
+/**
+ * What one step-request cost, in tokens.
+ *
+ * A step-request is not a model call: the runtime may take several model steps
+ * inside one (`RUN_LIMITS.maxStepsPerRequest`), and a turn may take several
+ * step-requests. These are the totals for THIS request, so a client that wants
+ * the turn or the conversation adds them up — which is also what the provider
+ * bills, since every step resends the conversation so far.
+ */
+export interface StepUsage {
+  inputTokens: number;
+  outputTokens: number;
+  /**
+   * As reported by the provider where it reports one; it can exceed
+   * input + output (reasoning and other overhead), so it is carried rather
+   * than recomputed.
+   */
+  totalTokens: number;
+  /**
+   * SUBSET of `inputTokens` — the part served from the provider's prompt
+   * cache. Adding it to the input would double-count. It is worth surfacing
+   * because it is billed at a fraction of the normal rate, so a large cached
+   * share means the input figure overstates the bill.
+   *
+   * Undefined when the provider said nothing about caching, which is not the
+   * same as a cache miss.
+   */
+  cachedInputTokens?: number;
+  /**
+   * SUBSET of `outputTokens` — the part the model spent thinking. Reasoning
+   * is billed AS output by the providers that report it, so it is already
+   * inside `outputTokens`; this only says how much of that output was
+   * thinking rather than answer. Adding it would double-count.
+   *
+   * Undefined when the provider reported none, which is not the same as a
+   * model that did no reasoning.
+   */
+  reasoningTokens?: number;
+  /**
+   * How many model steps actually reported usage. The field is absent
+   * altogether when that count would be zero — a provider that reports
+   * nothing must not read as a measured zero.
+   */
+  reportedSteps: number;
+}
+
 export type ChatStepFrame =
   | {
       type: "step-start";
@@ -265,7 +311,8 @@ export type ChatStepFrame =
         canonicalId: string;
         input: unknown;
       }>;
-      usage?: { inputTokens?: number; outputTokens?: number };
+      /** Absent when the provider reported no usage for this request. */
+      usage?: StepUsage;
     }
   | {
       type: "error";

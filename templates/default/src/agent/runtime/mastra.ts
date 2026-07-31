@@ -6,7 +6,7 @@ import {
   runtimeConfigAllowed,
   toRouterModelId,
 } from "@/server/model-config";
-import { ASSISTANT_INSTRUCTIONS } from "./instructions";
+import { assistantInstructions, type CatalogMode } from "./instructions";
 import { createScriptedModel } from "./scripted-model";
 
 /**
@@ -131,13 +131,18 @@ export const RUN_LIMITS = {
   modelTimeoutMs: 45_000,
 } as const;
 
-export function buildAssistantAgent(): Agent | null {
+/**
+ * `mode` is the catalog projection this step requested. It reaches the model
+ * as instructions, not as configuration: the two modes hand it different tool
+ * blocks, so a prompt describing the wrong one is worse than no prompt at all.
+ */
+export function buildAssistantAgent(mode: CatalogMode = "direct"): Agent | null {
   const model = resolveModel();
   if (!model) return null;
   return new Agent({
     id: "dashboard-assistant",
     name: "Dashboard assistant",
-    instructions: ASSISTANT_INSTRUCTIONS,
+    instructions: assistantInstructions(mode),
     model,
   });
 }

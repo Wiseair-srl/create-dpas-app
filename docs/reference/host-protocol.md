@@ -73,13 +73,23 @@ Meta bounds the **view** half only. The domain half is projected by
 `toAISDKTools`, which has no meta mode, so a wide domain surface is bounded by
 scope instead. The two compose rather than competing.
 
-Two consequences for a host:
+Three consequences for a host:
 
 - `toolset.wireNameMap()` is **empty** in meta mode — the three tool names are
   not capability ids. Do not treat that as "nothing could be mapped".
 - The **audit identity moves into the arguments**. `surface_act` is the tool;
   the operation is whatever `capabilityId` names. Recording the tool name would
   collapse every action in the application into one identity.
+- The **system prompt is part of the projection**, so `catalogMode` has to
+  reach it. A prompt describing `view_`/`domain_` tools is not merely stale
+  under meta — those names do not exist there, and a model that goes looking
+  for them guesses at `surface_discover({scope})`. A scope token outside the
+  route's floor returns an *empty* surface rather than falling back to it
+  (`AS-META-002`), which is indistinguishable from a page with nothing
+  mounted. Tell the model to call `surface_discover` with no arguments and
+  never to invent a token. This bites hardest on a capability whose only path
+  to the model is the surface — an `expose.aiSdk: false` procedure such as
+  `devices.disable` disappears entirely, while direct mode carries on working.
 
 ### Scope
 
@@ -123,6 +133,17 @@ Declaring a frontend tool grants **visibility only**. Its executor never leaves 
 | `error` | `{ code, message }` — a typed host error, never an exception |
 
 `step-finish.responseMessages` are the model messages this run produced, reconstructed server-side; the browser appends them to its history. `pendingToolCalls` are the frontend calls it must execute before posting the next step.
+
+`step-finish.usage` reports what **this step-request** cost — `inputTokens`, `outputTokens`, `totalTokens`, and `reportedSteps`, the number of model steps that reported anything. A request may run several model steps (`RUN_LIMITS.maxStepsPerRequest`) and a turn several requests, so a client that wants the turn or the conversation adds them up; that sum is also what gets billed, because every step resends the conversation so far. The runtime reports usage twice — per model step, and again as a run total on its closing chunk — and the host reconciles the two rather than adding them, keeping the running sum when a run ends at a timeout or an error before any total arrives. The field is **absent entirely** when the provider reported nothing, so an unmeasured step never reads as a measured zero.
+
+Two optional fields come with it, and **both are subsets, never additions**:
+
+| Field | Subset of | Why it is carried |
+|---|---|---|
+| `cachedInputTokens` | `inputTokens` | Cache reads bill at a fraction of the normal rate, so a large cached share means the input figure overstates the bill |
+| `reasoningTokens` | `outputTokens` | Reasoning bills **as output** and is already inside it; this only says how much of the output was thinking rather than answer |
+
+Adding either to its parent produces a number nobody is charged. Each is absent when the provider said nothing about it, which is not the same as zero — no reported reasoning is not proof the model did none. This is also why the counter in the template shows input and output **separately and never their sum**: output bills at several times input, so a combined figure corresponds to no rate at all. It counts tokens, not money — nothing here applies a price.
 
 A malformed frame is itself reported as an `error` frame with `PROTOCOL_DECODE_ERROR` rather than throwing inside the reader.
 
@@ -283,7 +304,7 @@ The server streams what happened, then returns two things it will immediately fo
 {"type":"text-delta","text":"Let me check the current filters"}
 {"type":"tool-call","toolCallId":"toolu_01A","wireName":"view_devices__filters__read","canonicalId":"view:devices.filters.read","executor":"browser","input":{}}
 {"type":"tool-call","toolCallId":"toolu_01B","wireName":"view_devices__table__readState","canonicalId":"view:devices.table.readState","executor":"browser","input":{}}
-{"type":"step-finish","stepId":"st_9c2","finishReason":"tool-calls","responseMessages":[…],"pendingToolCalls":[{"toolCallId":"toolu_01A","wireName":"view_devices__filters__read","canonicalId":"view:devices.filters.read","input":{}},{"toolCallId":"toolu_01B","wireName":"view_devices__table__readState","canonicalId":"view:devices.table.readState","input":{}}],"usage":{"inputTokens":3480,"outputTokens":96}}
+{"type":"step-finish","stepId":"st_9c2","finishReason":"tool-calls","responseMessages":[…],"pendingToolCalls":[{"toolCallId":"toolu_01A","wireName":"view_devices__filters__read","canonicalId":"view:devices.filters.read","input":{}},{"toolCallId":"toolu_01B","wireName":"view_devices__table__readState","canonicalId":"view:devices.table.readState","input":{}}],"usage":{"inputTokens":3480,"outputTokens":96,"totalTokens":3576,"cachedInputTokens":3072,"reasoningTokens":64,"reportedSteps":1}}
 ```
 
 `domainTools` on `step-start` is **Inspector data only** — descriptions without schemas, so the panel can show the domain half of the catalog. The model's tool definitions never travel back to the browser.

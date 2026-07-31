@@ -97,6 +97,22 @@ export function buildConversationReport(): string {
     `| Protocol | v${PROTOCOL_VERSION} |`,
     `| Running | ${store.running} |`,
     `| Entries | ${store.entries.length} (${toolCalls.length} tool calls, ${failures.length} failed) |`,
+    // "not reported" rather than zeroes: the guided demo runs no model, and
+    // some providers return no usage at all. Cached and reasoning are subsets
+    // of input and output respectively, so they are labelled, never added.
+    `| Tokens | ${
+      store.usage.reportedSteps === 0
+        ? "_not reported_"
+        : `${store.usage.inputTokens} in` +
+          (store.usage.cachedInputTokens !== undefined
+            ? ` (${store.usage.cachedInputTokens} cached)`
+            : "") +
+          ` · ${store.usage.outputTokens} out` +
+          (store.usage.reasoningTokens !== undefined
+            ? ` (${store.usage.reasoningTokens} reasoning)`
+            : "") +
+          ` · ${store.usage.totalTokens} total over ${store.usage.reportedSteps} model step(s)`
+    } |`,
     `| User agent | ${typeof navigator === "undefined" ? "—" : navigator.userAgent} |`,
   ].join("\n");
 

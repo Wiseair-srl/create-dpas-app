@@ -15,6 +15,21 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
   return "just now";
 }
 
+/**
+ * "842" / "12.4k" / "124k" / "1.03M" — token counts for a one-line readout.
+ *
+ * Exact while the number is still read digit by digit, compact once it stops
+ * being. The threshold is low because two of these share one badge, and an
+ * agentic turn reaches five figures of input quickly; the exact numbers are a
+ * hover away.
+ */
+export function formatTokens(tokens: number): string {
+  if (tokens < 10_000) return Math.round(tokens).toLocaleString();
+  if (tokens < 100_000) return `${(tokens / 1000).toFixed(1)}k`;
+  if (tokens < 1_000_000) return `${Math.round(tokens / 1000)}k`;
+  return `${(tokens / 1_000_000).toFixed(2)}M`;
+}
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     dateStyle: "medium",

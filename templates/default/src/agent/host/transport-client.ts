@@ -5,6 +5,7 @@ import { inspector } from "@/agent/inspector/inspector-store";
 import { buildFrontendToolDescriptors } from "./catalog";
 import { dispatchFrontendToolCall } from "./client-dispatch";
 import { HOST_CONSUMER } from "./identity";
+import { createLoopGuard, type ToolOutcome } from "./loop-guard";
 import {
   CATALOG_LIMITS,
   catalogTooLargeMessage,
@@ -12,6 +13,7 @@ import {
   PROTOCOL_VERSION,
   type ChatStepFrame,
   type DomainToolInfo,
+  type StepUsage,
   type WireModelMessage,
 } from "./protocol";
 import { scopeForRoute } from "./scope";
@@ -27,12 +29,17 @@ import type { CatalogMode } from "./catalog-mode";
  *      Surface (confirmations wait here, between requests) and loop.
  *
  * Run limits live in host code, not prompts: max steps, a turn deadline, and
- * repeated-failure loop detection.
+ * loop detection over both planes (see `loop-guard.ts`).
+ *
+ * Whatever ends a turn, its message history must still be WELL-FORMED, because
+ * it is persisted and replayed into the next one. An assistant tool-call with
+ * no matching result is a list most providers reject outright, so a turn that
+ * stops mid-step answers the calls it is not going to run rather than leaving
+ * the next turn to fail for a reason of its own.
  */
 
 const MAX_STEPS_PER_TURN = 8;
 const TURN_DEADLINE_MS = 180_000;
-const MAX_IDENTICAL_FAILURES = 3;
 
 export interface TurnEvents {
   onTextDelta: (text: string) => void;
@@ -53,6 +60,12 @@ export interface TurnEvents {
     result: unknown;
   }) => void;
   onDomainCatalog: (tools: DomainToolInfo[]) => void;
+  /**
+   * What one step-request cost. Called once per step, and not at all when the
+   * provider reported nothing — so a silent provider leaves the counter
+   * unmeasured rather than zeroed.
+   */
+  onUsage: (usage: StepUsage) => void;
   onAssistantMessageBoundary: () => void;
   onError: (error: { code: string; message: string }) => void;
 }
@@ -82,7 +95,7 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
   const { conversationId, turnId, registry, toolset, pathname, mode, signal, events } = options;
   let messages = [...options.messages];
   const startedAt = performance.now();
-  const failureCounts = new Map<string, number>();
+  const guard = createLoopGuard();
 
   for (let stepIndex = 0; stepIndex < MAX_STEPS_PER_TURN; stepIndex++) {
     if (signal.aborted) return { messages, status: "cancelled" };
@@ -197,6 +210,19 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
 
     messages = [...messages, ...step.responseMessages];
 
+    // Server-plane results are already answered in `responseMessages`, but the
+    // guard still has to see them: a domain tool failing over and over is the
+    // same stuck turn as a view tool doing it, and counting only one plane
+    // means half the loops run unbounded.
+    for (const settled of step.serverToolResults) {
+      const verdict = guard.record(settled);
+      if (verdict) {
+        messages = [...messages, ...unexecutedResults(step.pendingToolCalls)];
+        events.onError(verdict);
+        return { messages, status: "error" };
+      }
+    }
+
     if (step.pendingToolCalls.length === 0) {
       return { messages, status: "completed" };
     }
@@ -204,8 +230,15 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
     // Execute the frontend tool calls this step ended on. Confirmations for
     // destructive contextual procedures block HERE — no server stream is open.
     const toolMessages: WireModelMessage[] = [];
+    let executed = 0;
+    let cancelled = false;
+    let verdict: ReturnType<typeof guard.record> = null;
+
     for (const pending of step.pendingToolCalls) {
-      if (signal.aborted) return { messages, status: "cancelled" };
+      if (signal.aborted) {
+        cancelled = true;
+        break;
+      }
       events.onToolCall({
         toolCallId: pending.toolCallId,
         wireName: pending.wireName,
@@ -227,33 +260,31 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
         result: outcome.value,
       });
 
-      if (!outcome.ok) {
-        const key = `${pending.canonicalId}:${JSON.stringify(pending.input ?? {})}`;
-        const failures = (failureCounts.get(key) ?? 0) + 1;
-        failureCounts.set(key, failures);
-        if (failures >= MAX_IDENTICAL_FAILURES) {
-          events.onError({
-            code: "RUN_LIMIT_EXCEEDED",
-            message: `Stopped: ${pending.canonicalId} failed identically ${failures} times.`,
-          });
-          return { messages, status: "error" };
-        }
-      }
+      // Recorded BEFORE the verdict is acted on: the call did run and did
+      // produce this result, so history carries it either way.
+      toolMessages.push(toolResultMessage(pending, outcome.value));
+      executed += 1;
 
-      toolMessages.push({
-        role: "tool",
-        content: [
-          {
-            type: "tool-result",
-            toolCallId: pending.toolCallId,
-            toolName: pending.wireName,
-            output: { type: "json", value: outcome.value },
-          },
-        ],
+      verdict = guard.record({
+        canonicalId: pending.canonicalId,
+        input: pending.input,
+        ok: outcome.ok,
+        result: outcome.value,
       });
+      if (verdict) break;
     }
 
-    messages = [...messages, ...toolMessages];
+    messages = [
+      ...messages,
+      ...toolMessages,
+      ...unexecutedResults(step.pendingToolCalls.slice(executed)),
+    ];
+
+    if (cancelled) return { messages, status: "cancelled" };
+    if (verdict) {
+      events.onError(verdict);
+      return { messages, status: "error" };
+    }
     events.onAssistantMessageBoundary();
   }
 
@@ -264,15 +295,51 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
   return { messages, status: "error" };
 }
 
+interface PendingToolCall {
+  toolCallId: string;
+  wireName: string;
+  canonicalId: string;
+  input: unknown;
+}
+
 interface StepConsumption {
   status: "completed" | "error" | "cancelled";
   responseMessages: WireModelMessage[];
-  pendingToolCalls: Array<{
-    toolCallId: string;
-    wireName: string;
-    canonicalId: string;
-    input: unknown;
-  }>;
+  pendingToolCalls: PendingToolCall[];
+  /** Server-plane calls that settled during this step, in order, for the guard. */
+  serverToolResults: ToolOutcome[];
+}
+
+export function toolResultMessage(call: PendingToolCall, value: unknown): WireModelMessage {
+  return {
+    role: "tool",
+    content: [
+      {
+        type: "tool-result",
+        toolCallId: call.toolCallId,
+        toolName: call.wireName,
+        output: { type: "json", value },
+      },
+    ],
+  };
+}
+
+/**
+ * Answers for calls this turn will not run. Same code and wording the server
+ * uses for its own orphans (`settleOrphanedServerCalls`), because it is the
+ * same fact: the call was issued, nothing executed it, and saying so is what
+ * keeps the model from assuming it succeeded.
+ */
+export function unexecutedResults(calls: readonly PendingToolCall[]): WireModelMessage[] {
+  return calls.map((call) =>
+    toolResultMessage(call, {
+      error: {
+        code: "TOOL_NOT_EXECUTED",
+        message: "The run ended before this tool produced a result. Call it again.",
+        retry: "yes",
+      },
+    }),
+  );
 }
 
 async function consumeStepStream(
@@ -287,8 +354,12 @@ async function consumeStepStream(
     status: "completed",
     responseMessages: [],
     pendingToolCalls: [],
+    serverToolResults: [],
   };
   let sawError = false;
+  // `tool-result` frames carry no input, so the guard's identity key has to be
+  // rebuilt from the matching `tool-call`.
+  const serverInputs = new Map<string, unknown>();
 
   const frameDecoder = createFrameDecoder((frame) => {
     handleFrame(frame);
@@ -314,6 +385,7 @@ async function consumeStepStream(
         break;
       case "tool-call":
         if (frame.executor === "server") {
+          serverInputs.set(frame.toolCallId, frame.input);
           events.onToolCall({
             toolCallId: frame.toolCallId,
             wireName: frame.wireName,
@@ -324,6 +396,12 @@ async function consumeStepStream(
         }
         break;
       case "tool-result":
+        outcome.serverToolResults.push({
+          canonicalId: frame.canonicalId,
+          input: serverInputs.get(frame.toolCallId) ?? {},
+          ok: frame.ok,
+          result: frame.result,
+        });
         events.onToolResult({
           toolCallId: frame.toolCallId,
           wireName: frame.wireName,
@@ -346,6 +424,10 @@ async function consumeStepStream(
       case "step-finish":
         outcome.responseMessages = frame.responseMessages;
         outcome.pendingToolCalls = frame.pendingToolCalls;
+        // Per step, not per turn: a turn that loops through tool calls resends
+        // the whole conversation each time, so the steps add up to what the
+        // turn actually cost.
+        if (frame.usage) events.onUsage(frame.usage);
         break;
       case "error":
         sawError = true;

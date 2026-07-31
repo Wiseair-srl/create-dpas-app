@@ -49,6 +49,10 @@ test.describe("guided deterministic demo (golden scenario)", () => {
       page.locator('[data-testid="tool-card"][data-plane="view"]').first(),
     ).toContainText("VIEW");
 
+    // No model ran, so there is no token count — and none is invented. A
+    // confident "0 in · 0 out" here would be a measurement nobody took.
+    await expect(page.getByTestId("token-counter")).toHaveCount(0);
+
     // The inspector holds the correlated trace across lanes.
     await page.getByRole("tab", { name: "Inspector" }).click();
     await page.getByRole("tab", { name: "timeline" }).click();

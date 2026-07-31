@@ -1,10 +1,11 @@
-import { createAgentToolset } from "@agent-surface/core";
+import { createAgentToolset, type AgentSurfaceSnapshot } from "@agent-surface/core";
 import { renderAgentSurface, type RenderedAgentSurface } from "@agent-surface/testing/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { createFixture, FixturePage, FixtureProviders } from "@/test/devices-fixture";
 import { buildFrontendToolDescriptors } from "./catalog";
 import { HOST_CONSUMER } from "./identity";
 import type { CatalogMode } from "./catalog-mode";
+import { scopeForRoute } from "./scope";
 import { canonicalIdOfCall, isMetaToolName } from "./wire-names";
 
 /**
@@ -40,7 +41,6 @@ function project(rendered: RenderedAgentSurface, mode: CatalogMode) {
     consumer: HOST_CONSUMER,
     topology: "remote",
     confirmations: "wait",
-    descriptionIncludesState: false,
     mode,
   });
   const projection = buildFrontendToolDescriptors(
@@ -96,6 +96,72 @@ describe("catalog mode · the same capabilities, two projections", () => {
 
     expect(JSON.stringify(after.descriptors)).toBe(JSON.stringify(before.descriptors));
     expect(after.descriptors).toHaveLength(3);
+  });
+});
+
+describe("catalog mode · meta discovery under the route scope", () => {
+  /**
+   * The toolset the host actually builds on /dashboard: meta projection over
+   * the route's scope floor. `project()` above is deliberately unscoped, and
+   * scope is exactly what makes discovery fail — so it is restated here.
+   */
+  async function discover(scope?: string[]) {
+    const toolset = createAgentToolset(fixture!.registry, {
+      consumer: HOST_CONSUMER,
+      topology: "remote",
+      confirmations: "wait",
+      mode: "meta",
+      scope: [...scopeForRoute("/dashboard")],
+    });
+    const tool = toolset.tools().find((t) => t.name === "surface_discover")!;
+    const result = await tool.execute(scope ? { scope } : {}, {});
+    toolset.dispose();
+    // Discovery itself never fails on a bad scope — that is the whole problem:
+    // a disjoint request is an `ok` result carrying an empty surface.
+    if (result.status !== "ok") throw new Error(`surface_discover failed: ${result.error.code}`);
+    const snapshot = result.output as unknown as AgentSurfaceSnapshot;
+    return {
+      snapshot,
+      ids: [
+        ...snapshot.components.flatMap((c) => [
+          ...c.observations.map((o) => o.capabilityId),
+          ...c.actions.map((a) => a.capabilityId),
+        ]),
+        ...snapshot.procedures.map((p) => p.procedureId),
+      ],
+    };
+  }
+
+  it("returns the whole route-scoped surface when called with no arguments", async () => {
+    await mount();
+    const { snapshot, ids } = await discover();
+
+    expect(snapshot.components.length).toBeGreaterThan(0);
+    expect(ids).toContain("view:devices.table.selectRows");
+    // The operation that has NO other path to the model: `expose.aiSdk: false`
+    // server-side, so meta discovery is the only way it can ever be found.
+    expect(ids).toContain("domain:devices.disable");
+  });
+
+  it("blanks the surface for a scope token outside the floor", async () => {
+    // AS-META-002: a disjoint scope yields empty, never a fallback to the
+    // floor. Not a library bug — the reason the prompt must tell the model to
+    // omit `scope` rather than guess one. "view_" is the tool-name prefix a
+    // direct-mode prompt teaches; "*" is the wildcard a model assumes exists.
+    await mount();
+    for (const guess of [["view_"], ["*"], ["domain"]]) {
+      const { snapshot } = await discover(guess);
+      expect(snapshot.components).toEqual([]);
+      expect(snapshot.procedures).toEqual([]);
+    }
+  });
+
+  it("narrows, rather than blanks, for a token inside the floor", async () => {
+    await mount();
+    const { ids } = await discover(["devices.table"]);
+
+    expect(ids).toContain("view:devices.table.selectRows");
+    expect(ids).not.toContain("view:devices.filters.set");
   });
 });
 

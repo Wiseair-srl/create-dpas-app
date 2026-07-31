@@ -55,10 +55,10 @@ export function buildFrontendToolDescriptors(
       continue;
     }
     const info = meta.get(canonicalId);
-    // `description` is note-free and state-free by construction here: the
-    // registry is built with `snapshotMergesContextualNote: false` and the
-    // toolset with `descriptionIncludesState: false`. Nothing volatile may be
-    // folded back into it — that would silently defeat prefix caching.
+    // `description` is note-free and state-free by construction here — since
+    // core 0.5 that is the only composition the library produces. Nothing
+    // volatile may be folded back into it: that would silently defeat prefix
+    // caching.
     descriptors.push({
       wireName: tool.name,
       canonicalId,

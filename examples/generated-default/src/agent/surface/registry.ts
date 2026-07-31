@@ -99,12 +99,12 @@ function build(): SurfaceBundle {
     route: () => ({ path: routeRef.current }),
     // Deny-by-default baseline: with no authenticated user there is no surface.
     policies: [authenticated()],
-    // Keep a contextual binding's live text OUT of `description` (D28). The
-    // description then changes only when code or the mount set changes, which
-    // is what lets the provider tool block be prompt-prefix cached across the
-    // steps of a turn; the live text rides in `contextualNote` and is rendered
-    // outside the tool definitions.
-    snapshotMergesContextualNote: false,
+    // A contextual binding's live text stays OUT of `description` (D28) — since
+    // core 0.5 that is the only behavior, so there is no longer a flag to ask
+    // for it. The description then changes only when code or the mount set
+    // changes, which is what lets the provider tool block be prompt-prefix
+    // cached across the steps of a turn; the live text rides in
+    // `contextualNote` and is rendered outside the tool definitions.
   });
 
   const bridge = createOrpcAgentBridge<DomainClientTree>({

@@ -15,6 +15,7 @@ import {
   SUPPORTED_PROTOCOL_VERSIONS,
   type ChatStepFrame,
   type DomainToolInfo,
+  type StepUsage,
   type WireModelMessage,
 } from "./protocol";
 import { findCatalogCollisions } from "./catalog";
@@ -65,7 +66,10 @@ export async function handleChatStep(request: Request): Promise<Response> {
   // below recognise its own entries.
   const stepId = newStepId();
 
-  const agent = buildAssistantAgent();
+  // The projection the browser asked for shapes the INSTRUCTIONS, not just the
+  // tool block: under `meta` the model sees three verbs and must discover its
+  // way to a capability, which a direct-mode prompt actively misdescribes.
+  const agent = buildAssistantAgent(step.catalogMode);
   if (!agent) {
     return errorResponse(
       503,
@@ -272,6 +276,7 @@ export async function handleChatStep(request: Request): Promise<Response> {
       });
 
       const accumulator = createResponseAccumulator();
+      const usage = createUsageAccumulator();
       let finishReason = "unknown";
 
       try {
@@ -401,6 +406,8 @@ export async function handleChatStep(request: Request): Promise<Response> {
             case "finish": {
               const stepResult = chunk.payload?.stepResult as { reason?: string } | undefined;
               if (stepResult?.reason) finishReason = stepResult.reason;
+              if (chunk.type === "finish") usage.finish(chunk.payload);
+              else usage.step(chunk.payload);
               accumulator.flush();
               break;
             }
@@ -445,6 +452,25 @@ export async function handleChatStep(request: Request): Promise<Response> {
             result: settled.result,
           });
         }
+        // What the request cost. Reported even when it ended at a timeout or
+        // an error: those tokens were spent too, and a counter that silently
+        // skips the expensive failures is worse than none (invariant 7).
+        const spent = usage.value();
+        if (spent) {
+          write({
+            type: "inspector",
+            lane: "runtime",
+            eventType: "model.usage",
+            summary:
+              `${spent.inputTokens} in · ${spent.outputTokens} out` +
+              (spent.reasoningTokens !== undefined
+                ? ` (${spent.reasoningTokens} reasoning)`
+                : "") +
+              ` · ${spent.reportedSteps} model step${spent.reportedSteps === 1 ? "" : "s"}`,
+            correlation: { conversationId: step.conversationId, turnId: step.turnId, stepId },
+            data: spent,
+          });
+        }
         write({
           type: "step-finish",
           stepId,
@@ -456,6 +482,7 @@ export async function handleChatStep(request: Request): Promise<Response> {
             canonicalId: canonicalIdOfToolCall(call.wireName, call.input),
             input: call.input,
           })),
+          ...(spent ? { usage: spent } : {}),
         });
         // A reader that fell behind had entries dropped rather than buffered.
         // Say so: a gap the Inspector does not know about reads as "nothing
@@ -578,6 +605,112 @@ export function settleOrphanedServerCalls(
     settled.push(outcome);
   }
   return settled;
+}
+
+/**
+ * Token usage for one step-request.
+ *
+ * The runtime reports it twice over: every `step-finish` carries that model
+ * step's own tokens, and the closing `finish` carries the run total already
+ * summed. Adding both would double every number, so the run total wins when it
+ * arrives — and the running sum is what is left to report when it does not,
+ * which is exactly the timeout, error and abort cases where the tokens were
+ * spent anyway.
+ */
+export function createUsageAccumulator() {
+  const summed: Omit<StepUsage, "reportedSteps"> = {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+  };
+  let reportedSteps = 0;
+  let runTotal: Omit<StepUsage, "reportedSteps"> | undefined;
+
+  return {
+    /** One model step finished; add what it reported. */
+    step(payload: unknown) {
+      const usage = readUsage(payload);
+      if (!usage) return;
+      reportedSteps += 1;
+      summed.inputTokens += usage.inputTokens;
+      summed.outputTokens += usage.outputTokens;
+      summed.totalTokens += usage.totalTokens;
+      // Optional subsets: a step that reported none must not turn an
+      // otherwise-reported figure into a zero, so absent stays absent. Only
+      // assigned when there is something to assign — writing `undefined`
+      // would create the key, and a present-but-undefined field is a third
+      // state nothing downstream is expecting.
+      const cached = addOptional(summed.cachedInputTokens, usage.cachedInputTokens);
+      if (cached !== undefined) summed.cachedInputTokens = cached;
+      const reasoning = addOptional(summed.reasoningTokens, usage.reasoningTokens);
+      if (reasoning !== undefined) summed.reasoningTokens = reasoning;
+    },
+    /** The run finished; its own total supersedes the running sum. */
+    finish(payload: unknown) {
+      const usage = readUsage(payload);
+      if (usage) runTotal = usage;
+    },
+    /**
+     * Undefined when nothing was reported. A provider that stays silent about
+     * tokens leaves the counter saying so, rather than showing a zero it never
+     * measured (invariant 7).
+     */
+    value(): StepUsage | undefined {
+      if (runTotal) return { ...runTotal, reportedSteps: Math.max(reportedSteps, 1) };
+      return reportedSteps > 0 ? { ...summed, reportedSteps } : undefined;
+    },
+  };
+}
+
+/**
+ * Reads token counts out of a finish payload. They live under `output.usage`;
+ * `totalUsage` and a bare `usage` are accepted too, so a runtime that fills a
+ * different one still counts. A field left undefined reads as 0, but a payload
+ * carrying no usable field at all reads as undefined — the distinction between
+ * "zero tokens" and "not reported" is the whole point.
+ */
+function readUsage(payload: unknown): Omit<StepUsage, "reportedSteps"> | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const source = payload as {
+    output?: { usage?: unknown };
+    totalUsage?: unknown;
+    usage?: unknown;
+  };
+  const usage = source.output?.usage ?? source.totalUsage ?? source.usage;
+  if (!usage || typeof usage !== "object") return undefined;
+
+  const fields = usage as Record<string, unknown>;
+  const inputTokens = count(fields.inputTokens);
+  const outputTokens = count(fields.outputTokens);
+  const totalTokens = count(fields.totalTokens);
+  if (inputTokens === undefined && outputTokens === undefined && totalTokens === undefined) {
+    return undefined;
+  }
+  // Both are SUBSETS of the figures above, never additions — reasoning is
+  // billed as output and already inside it, and cached input is already
+  // inside the input. They are carried for disclosure, not arithmetic.
+  const cachedInputTokens = count(fields.cachedInputTokens);
+  const reasoningTokens = count(fields.reasoningTokens);
+  return {
+    inputTokens: inputTokens ?? 0,
+    outputTokens: outputTokens ?? 0,
+    // Providers that omit the total are simply reporting the sum in parts.
+    totalTokens: totalTokens ?? (inputTokens ?? 0) + (outputTokens ?? 0),
+    ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
+    ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
+  };
+}
+
+/** A token count is a finite, non-negative number or it is not a count. */
+function count(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+/** Adds two counts that may each be "not reported", which is not zero. */
+export function addOptional(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return a + b;
 }
 
 export type ResponseAccumulator = ReturnType<typeof createResponseAccumulator>;

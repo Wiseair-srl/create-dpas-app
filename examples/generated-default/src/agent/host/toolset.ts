@@ -36,11 +36,12 @@ function build(
     mode,
     ...(scope.length > 0 ? { scope: [...scope] } : {}),
     // Live state stays OUT of `description` and rides in `AgentTool.state`
-    // instead (D28). Tool definitions sit at the front of the provider prompt,
-    // so anything volatile in them invalidates the cached prefix behind the
-    // whole conversation on every step — the host renders `state` after the
-    // messages, where it costs a few hundred tokens and invalidates nothing.
-    descriptionIncludesState: false,
+    // instead (D28) — since core 0.5 this is the only behavior, so there is no
+    // longer a flag to ask for it. Tool definitions sit at the front of the
+    // provider prompt, so anything volatile in them invalidates the cached
+    // prefix behind the whole conversation on every step; the host renders
+    // `state` after the messages, where it costs a few hundred tokens and
+    // invalidates nothing.
   });
 }
 

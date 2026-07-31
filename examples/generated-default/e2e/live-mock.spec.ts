@@ -66,6 +66,26 @@ test.describe("live agent mode (scripted model)", () => {
     await expect(transcript).not.toContainText("<|channel|>");
     await expect(reasoning).not.toContainText("analysis");
 
+    // The turn's cost is reported, summed across every step-request it took —
+    // the scripted model bills 16/16 per model step (ADR-0006), and this
+    // scenario takes five.
+    const tokens = page.getByTestId("token-counter");
+    await expect(tokens).toBeVisible();
+    await expect(tokens).toHaveAttribute("data-input-tokens", "80");
+    await expect(tokens).toHaveAttribute("data-output-tokens", "80");
+    // Both directions, never their sum: output bills at several times input,
+    // so 160 would be a number nobody is charged.
+    await expect(tokens.getByRole("button")).toHaveText("80↑ · 80↓");
+    const tokenDetail = page.getByTestId("token-counter-detail");
+    await expect(tokenDetail).toBeHidden();
+    await tokens.hover();
+    await expect(tokenDetail).toBeVisible();
+    await expect(tokenDetail).toContainText("5 model steps");
+    // Reasoning and cached input are subsets of the lines above them — the
+    // scripted model reports 4 and 8 per step, inside its 16/16.
+    await expect(tokenDetail).toContainText("of which reasoning");
+    await expect(tokenDetail).toContainText("of which cached");
+
     // Server-executed domain tools ran inside the loop this turn — the
     // inspector shows the composed domain catalog arriving per step.
     await page.getByRole("tab", { name: "Inspector" }).click();

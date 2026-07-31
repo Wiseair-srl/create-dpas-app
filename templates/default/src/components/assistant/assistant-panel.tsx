@@ -27,6 +27,7 @@ import { InspectorPanel } from "@/components/agent-inspector/inspector-panel";
 import { ModelSettingsDialog } from "./model-settings";
 import { CatalogModeToggle } from "./catalog-mode-toggle";
 import { AssistantComposer, AssistantThread } from "./thread";
+import { TokenCounter } from "./token-counter";
 
 /**
  * The assistant panel: chat (live model and/or guided demo) plus the Agent
@@ -234,7 +235,9 @@ function DemoBar({
   onReset: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    // Wraps rather than clips: the assistant panel is resizable down to 340px,
+    // where these four controls no longer fit on one line.
+    <div className="flex flex-wrap items-center gap-2">
       {running === "idle" ? (
         <>
           <Button size="sm" variant="secondary" onClick={onStart} data-testid="run-guided-demo">
@@ -251,19 +254,20 @@ function DemoBar({
             <RotateCcw aria-hidden className="h-3.5 w-3.5" />
             Clear
           </Button>
-          <CopyConversationButton />
         </>
       ) : (
-        <>
-          <Button size="sm" variant="secondary" onClick={onStop} data-testid="stop-run">
-            <Square aria-hidden className="h-3 w-3 fill-current" />
-            Stop {running === "demo" ? "demo" : "run"}
-          </Button>
-          {/* Available mid-run too: a run that is looping is exactly the one
-              worth capturing, and waiting for it to finish loses the state. */}
-          <CopyConversationButton />
-        </>
+        <Button size="sm" variant="secondary" onClick={onStop} data-testid="stop-run">
+          <Square aria-hidden className="h-3 w-3 fill-current" />
+          Stop {running === "demo" ? "demo" : "run"}
+        </Button>
       )}
+      {/* Both stay available mid-run: a run that is looping is exactly the one
+          worth counting and capturing, and waiting for it to finish loses the
+          state. */}
+      <div className="ml-auto flex min-w-0 items-center gap-1">
+        <TokenCounter />
+        <CopyConversationButton />
+      </div>
     </div>
   );
 }
@@ -289,7 +293,7 @@ function CopyConversationButton() {
       variant="ghost"
       onClick={copy}
       disabled={entries === 0}
-      className="ml-auto text-muted-foreground"
+      className="text-muted-foreground"
       title="Copy the conversation, tool calls and trace as Markdown"
       data-testid="copy-conversation"
     >

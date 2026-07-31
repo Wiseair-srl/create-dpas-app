@@ -51,10 +51,37 @@ export async function dispatchFrontendToolCall(
   }
 
   const started = performance.now();
-  const result = await tool.execute((call.input ?? {}) as JsonValue, {
-    toolCallId: call.toolCallId,
-  });
-  const model = frontendResultToModelValue(result);
+  // The surface contract is that invocation FAILURES come back as typed
+  // results (`errors.ts`), so this await is not supposed to reject. When it
+  // does, the cause is a defect below the contract — a library bug, or a dev
+  // probe that throws out of `invoke()` by design — and letting it propagate
+  // takes down the whole turn as an unhandled rejection, losing the run, the
+  // history and the audit trail for a single bad tool call.
+  //
+  // So it is contained and reported in the shape everything downstream already
+  // handles. The model gets a `retry: "no"` it can act on, the loop guard
+  // counts it, and the Inspector records it as a settled dispatch rather than
+  // a hole. The defect still surfaces — on the console, and as a failed card —
+  // it just no longer decides the fate of the turn.
+  let model: ModelToolResult;
+  try {
+    const result = await tool.execute((call.input ?? {}) as JsonValue, {
+      toolCallId: call.toolCallId,
+    });
+    model = frontendResultToModelValue(result);
+  } catch (error) {
+    console.error(`[dpas] ${canonicalId} threw instead of returning a result`, error);
+    model = {
+      ok: false,
+      value: {
+        error: {
+          code: "EXECUTION_FAILED",
+          message: "The capability threw instead of returning a result.",
+          retry: "no",
+        },
+      },
+    };
+  }
 
   inspector.push({
     lane: "host",

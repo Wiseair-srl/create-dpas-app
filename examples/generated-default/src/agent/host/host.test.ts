@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentSurfaceSnapshot, AgentToolset } from "@agent-surface/core";
 import { buildFrontendToolDescriptors, findCatalogCollisions } from "./catalog";
+import { dispatchFrontendToolCall } from "./client-dispatch";
 import { frontendResultToModelValue, missingToolResult } from "./errors";
 import {
   ChatStepRequestSchema,
@@ -193,5 +194,44 @@ describe("result envelopes", () => {
     expect(missingToolResult("view_gone").value).toMatchObject({
       error: { code: "CAPABILITY_NOT_FOUND", retry: "after-refresh" },
     });
+  });
+});
+
+describe("frontend dispatch · a throwing tool cannot take down the turn", () => {
+  const toolsetWith = (execute: () => Promise<unknown>): AgentToolset =>
+    ({
+      tools: () => [{ name: "view_boom", execute }],
+      wireNameMap: () => new Map([["view_boom", "view:boom"]]),
+    }) as unknown as AgentToolset;
+
+  const context = { conversationId: "c1", turnId: "t1" };
+  const call = { toolCallId: "call_1", wireName: "view_boom", input: {} };
+
+  it("returns a typed result when the tool rejects", async () => {
+    // The contract is that failures come back as results. When something
+    // below it breaks that — a library defect, a dev probe throwing out of
+    // invoke() — the turn must survive it. Before this, the rejection escaped
+    // runTurn as an unhandled rejection and killed the whole run.
+    const toolset = toolsetWith(() =>
+      Promise.reject(new TypeError("Cannot read properties of undefined (reading 'length')")),
+    );
+
+    const result = await dispatchFrontendToolCall(toolset, call, context);
+
+    expect(result.ok).toBe(false);
+    expect(result.value).toMatchObject({ error: { code: "EXECUTION_FAILED", retry: "no" } });
+  });
+
+  it("keeps returning results for the calls after the one that threw", async () => {
+    let calls = 0;
+    const toolset = toolsetWith(() => {
+      calls += 1;
+      return calls === 1
+        ? Promise.reject(new Error("boom"))
+        : Promise.resolve({ status: "ok", output: { done: true } });
+    });
+
+    expect((await dispatchFrontendToolCall(toolset, call, context)).ok).toBe(false);
+    expect((await dispatchFrontendToolCall(toolset, call, context)).ok).toBe(true);
   });
 });
