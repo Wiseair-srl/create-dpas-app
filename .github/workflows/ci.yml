@@ -31,6 +31,9 @@ jobs:
       - run: pnpm build
       - name: Example drift gate
         run: pnpm check:example
+      - name: Docs site (fails on dead links)
+        if: matrix.node == 22
+        run: pnpm docs:build
 
   e2e:
     name: template e2e (deterministic)

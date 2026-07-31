@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="create-dpas-app">
+  <defs>
+    <linearGradient id="view" x1="3" y1="3" x2="29" y2="15" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a78bfa" />
+      <stop offset="1" stop-color="#7c3aed" />
+    </linearGradient>
+    <linearGradient id="domain" x1="3" y1="17" x2="29" y2="29" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#60a5fa" />
+      <stop offset="1" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+
+  <!-- The two planes: view (browser) above, domain (server, authoritative) below. -->
+  <path d="M16 2.5 29 9.5 16 16.5 3 9.5Z" fill="url(#view)" fill-opacity="0.22" stroke="url(#view)" stroke-width="1.6" stroke-linejoin="round" />
+  <path d="M16 15.5 29 22.5 16 29.5 3 22.5Z" fill="url(#domain)" fill-opacity="0.28" stroke="url(#domain)" stroke-width="1.6" stroke-linejoin="round" />
+
+  <!-- One governed path between them. -->
+  <circle cx="16" cy="9.5" r="2" fill="url(#view)" />
+  <circle cx="16" cy="22.5" r="2" fill="url(#domain)" />
+</svg>

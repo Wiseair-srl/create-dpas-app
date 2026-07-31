@@ -68,19 +68,23 @@ pnpm create dpas-app [name] [options]
 packages/create-dpas-app/    the CLI
 templates/default/           the golden app (a real, tested workspace app)
 examples/generated-default/  committed generator output, drift-gated
-docs/                        architecture, capability guides, ADRs
+docs/                        the documentation site (VitePress) + ADRs
 ```
 
 ```bash
 pnpm install
 pnpm dev             # run the template app
+pnpm docs:dev        # the documentation site, with hot reload
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 pnpm test:e2e        # Playwright against a production build (scripted model)
 pnpm test:scaffold   # generate a fresh app in /tmp and run ITS gates
 ```
 
-Start with [docs/architecture.md](docs/architecture.md); decisions are in
-[docs/adr/](docs/adr/). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
+Start with [docs/getting-started.md](docs/getting-started.md) and
+[the dual-plane model](docs/concepts/dual-plane.md); decisions are in
+[docs/adr/](docs/adr/). The guides that ship inside every generated app live in
+`templates/default/docs/` and are included by the site, so the two can't drift.
+Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

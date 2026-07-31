@@ -20,7 +20,11 @@ Node >= 22.13 and pnpm 10 (via corepack) are required.
 - `examples/generated-default` — a committed generator artifact. Never edit it
   by hand; run `pnpm regen:example` after template changes (CI enforces this
   with `pnpm check:example`).
-- `docs/` — repo-level docs and ADRs. Architectural decisions get an ADR.
+- `docs/` — the documentation site (VitePress) and ADRs. Run it with
+  `pnpm docs:dev`; `pnpm docs:build` also fails on dead links. Architectural
+  decisions get an ADR. The guides that ship inside generated apps live in
+  `templates/default/docs/` and are `@include`d by the site — edit them there,
+  never twice.
 
 ## Quality gates (all must pass)
 

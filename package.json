@@ -16,12 +16,16 @@
     "test:scaffold": "node scripts/scaffold-smoke.mjs",
     "check:example": "node scripts/check-example-drift.mjs",
     "regen:example": "node scripts/regen-example.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "vitepress": "^1.6.4"
   }
 }

@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .next/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 out/
 coverage/
 playwright-report/
