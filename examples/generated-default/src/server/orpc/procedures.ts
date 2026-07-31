@@ -46,6 +46,7 @@ export const listDevices = authed
       description:
         "List devices, optionally filtered by status (online/offline), city, or disabled flag. Read-only.",
       expose: { aiSdk: true, test: true },
+      tags: ["devices"],
       sideEffect: "read",
       risk: "low",
     },
@@ -62,6 +63,7 @@ export const getDevice = authed
     agent: {
       description: "Fetch one device by id, including firmware and last-seen time. Read-only.",
       expose: { aiSdk: true, test: true },
+      tags: ["devices"],
       sideEffect: "read",
       risk: "low",
     },
@@ -85,6 +87,7 @@ export const disableDevices = operatorOnly
       // for one operation (forbidden — see docs/security-and-confirmation.md).
       description: "Disable the given devices. Destructive: they stop reporting data.",
       expose: { aiSdk: false, test: true },
+      tags: ["devices"],
       sideEffect: "destructive",
       risk: "high",
     },
@@ -131,6 +134,7 @@ export const enableDevices = operatorOnly
       // Human-only undo path: not exposed on any agent surface (test only).
       description: "Re-enable previously disabled devices.",
       expose: { test: true },
+      tags: ["devices"],
       sideEffect: "write",
       risk: "medium",
     },

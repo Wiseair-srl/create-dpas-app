@@ -1,27 +1,63 @@
-import { decodeWireName, encodeWireName } from "@agent-surface/core";
+import { encodeWireName } from "@agent-surface/core";
 
 /**
- * Canonical id ↔ provider-safe wire name mapping for BOTH planes, aligned on
- * one convention (":" → "_", "." → "__"):
+ * Canonical id → provider-safe wire name for BOTH planes, on one convention
+ * (":" → "_", "." → "__"):
  *
- *   view:devices.filters.set   ↔  view_devices__filters__set
- *   domain:devices.list        ↔  domain_devices__list
+ *   view:devices.filters.set   →  view_devices__filters__set
+ *   domain:devices.list        →  domain_devices__list
  *
- * Agent Surface encodes its own tools; the domain side uses `domainToolName`
- * as the orpc-agent `toolNaming` override so the model sees one uniform,
- * reversible namespace. The canonical id remains the audit identity.
+ * Encoding is deliberately NOT reversible by string surgery. A canonical id
+ * whose encoding would exceed 64 characters is shortened and hashed, and
+ * `decodeWireName` refuses those rather than returning a plausible wrong id
+ * (agent-surface D30). Multi-instance surface tools also carry an
+ * `_at_<instance>` suffix that decodes to nothing on its own.
+ *
+ * Reversal is therefore always a MAP LOOKUP:
+ *
+ *   - browser — `toolset.wireNameMap()`, authoritative for the catalog it just
+ *     built;
+ *   - server — the domain map captured while naming the tools, plus the
+ *     frontend ids the wire descriptors already carry.
+ *
+ * The canonical id is the audit identity, so a name that cannot be mapped
+ * means the capability is withheld from the model rather than offered under a
+ * guessed identity.
  */
 
 export function domainToolName(capabilityId: string): string {
   return encodeWireName(`domain:${capabilityId}`);
 }
 
-/** Reverse a wire name to its canonical id. Returns undefined for truncated names. */
-export function canonicalIdFromWireName(wireName: string): string | undefined {
-  // Multi-instance surface tools carry an `_at_<instance>` suffix; the
-  // canonical id is the part before it.
-  const [base] = wireName.split("_at_");
-  return decodeWireName(base ?? wireName);
+/** The three generic tools meta mode projects instead of one per capability. */
+export const META_TOOL_NAMES = new Set(["surface_discover", "surface_read", "surface_act"]);
+
+export function isMetaToolName(wireName: string): boolean {
+  return META_TOOL_NAMES.has(wireName);
+}
+
+/**
+ * The canonical id a tool CALL acts on — the audit identity (invariant 8).
+ *
+ * In direct mode the wire name IS the capability, so the catalog's map answers
+ * and `mapped` is passed straight through. In meta mode the model calls one of
+ * three generic tools and names its target in `capabilityId`: the tool is
+ * `surface_act`, but the operation being audited is whatever it was pointed
+ * at. Recording `surface_act` would collapse every action in the application
+ * into one audit identity.
+ *
+ * A meta call with no usable `capabilityId` falls back to naming the meta tool
+ * itself — that call cannot reach a capability anyway, so there is nothing
+ * else it could honestly be attributed to.
+ */
+export function canonicalIdOfCall(
+  wireName: string,
+  input: unknown,
+  mapped: string | undefined,
+): string | undefined {
+  if (!isMetaToolName(wireName)) return mapped;
+  const target = (input as { capabilityId?: unknown } | null | undefined)?.capabilityId;
+  return typeof target === "string" && target.length > 0 ? target : `meta:${wireName}`;
 }
 
 export { encodeWireName };

@@ -16,16 +16,83 @@ The third point is the reason the protocol exists in this shape: **confirmations
 
 ## Request
 
+Two versions are served side by side for one minor release, so a tab that was
+open across a deploy keeps working instead of breaking on its next message. The
+server branches on `protocolVersion` and normalises both to one internal shape;
+the response echoes the version the exchange actually used in
+`x-dpas-protocol-version`.
+
+**v2 — current.**
+
 ```ts
 {
-  protocolVersion: 1,
+  protocolVersion: 2,
   conversationId: string,      // ≤ 64 chars — one chat thread
   turnId: string,              // ≤ 64 chars — one user message and all it causes
   stepIndex: number,           // 0…64
-  messages: WireModelMessage[],// 1…200 — the whole history; the server is stateless
-  frontendTools: WireToolDescriptor[],  // ≤ 64
+  pathname: string,            // the route; the server derives the scope floor
+  messages: WireModelMessage[],// 1…400 — the whole history; the server is stateless
+  catalog: {
+    mode: "direct" | "meta",   // "direct" = one tool per capability
+    scope?: string[],          // ≤ 32 — a REQUEST, intersected with the server floor
+    frontendTools: WireToolDescriptor[],  // ≤ 128
+    truncated?: { dropped: number, reason: "budget" | "limit" | "undecodable" },
+  },
 }
 ```
+
+**v1 — accepted, deprecated.** No `pathname` and no `catalog`; `frontendTools`
+sits at the top level, capped at 64, and `messages` at 200. A v1 request is
+normalised to an unscoped direct catalog. Its one behavioural difference is
+[collisions](#catalog-composition-rules): v1 aborts the turn, v2 drops the
+duplicate and continues.
+
+### Limits
+
+Checked in the browser before posting and again on the server, which is the
+authority. Exceeding one is a **legal request that is too large** — it answers
+`413 CATALOG_TOO_LARGE` naming plane, count and limit, never
+`PROTOCOL_DECODE_ERROR`.
+
+| Limit | Value |
+|---|---|
+| `maxFrontendTools` | 128 |
+| `maxDomainTools` | 128 |
+| `maxTotalTools` | 192 |
+| `maxMessages` | 400 |
+
+### Catalog mode
+
+`direct` gives the model one tool per capability. `meta` gives it three —
+`surface_discover`, `surface_read`, `surface_act` — and it names the capability
+it wants in `capabilityId`. Both run against the same registry and the same
+capabilities; the choice is a projection, not a different application, and the
+template ships a toggle so the two can be compared side by side.
+
+Meta bounds the **view** half only. The domain half is projected by
+`toAISDKTools`, which has no meta mode, so a wide domain surface is bounded by
+scope instead. The two compose rather than competing.
+
+Two consequences for a host:
+
+- `toolset.wireNameMap()` is **empty** in meta mode — the three tool names are
+  not capability ids. Do not treat that as "nothing could be mapped".
+- The **audit identity moves into the arguments**. `surface_act` is the tool;
+  the operation is whatever `capabilityId` names. Recording the tool name would
+  collapse every action in the application into one identity.
+
+### Scope
+
+`scope` shapes **discovery only** and is never an authority boundary: `invoke`
+does not consult it on either plane, and a capability outside the scope stays
+fully invocable by an authorized actor. Use exposure or a policy to make one
+unreachable.
+
+One token covers both planes because both already declare it at the feature —
+the view plane matches it against the component `type` as a prefix, the domain
+plane against `meta.tags`. The browser's `scope` is a request: the server
+intersects it with the route's floor and can only narrow, never widen. An empty
+scope means *unscoped*, not *empty*.
 
 A `WireToolDescriptor` is what the model gets to know about a browser-side capability:
 
@@ -46,12 +113,12 @@ Declaring a frontend tool grants **visibility only**. Its executor never leaves 
 
 | Frame | Carries |
 |---|---|
-| `step-start` | `stepId`, ids, and the **domain half of the composed catalog** for the Inspector |
+| `step-start` | `stepId`, ids, the **domain half of the composed catalog**, plus the effective `catalogMode` and `scope` so the Inspector shows what the model was actually offered |
 | `text-delta` | Answer text |
 | `reasoning-delta` | Model reasoning, on its own frame so the UI can fold it and never confuse it with the answer |
 | `tool-call` | `toolCallId`, `wireName`, `canonicalId`, `executor: "server" \| "browser"`, `input` |
 | `tool-result` | The same ids plus `ok` and `result` |
-| `inspector` | Correlated events from `runtime`, `domain` or `host` lanes — forwarded audit activity |
+| `inspector` | Correlated events from `runtime`, `domain` or `host` lanes — forwarded audit activity, filtered to this session's actor. Also carries `catalog.collision`, `catalog.truncated`, `catalog.undecodable` and `inspector.dropped`, so every reduction is visible |
 | `step-finish` | `finishReason`, `responseMessages`, `pendingToolCalls`, optional `usage` |
 | `error` | `{ code, message }` — a typed host error, never an exception |
 
@@ -62,8 +129,9 @@ A malformed frame is itself reported as an `error` frame with `PROTOCOL_DECODE_E
 ## Catalog composition rules
 
 - **Per actor, per turn, never cached across users.** The domain half is produced by the oRPC Agent runtime for the session's actor, so exposure and policy are re-evaluated every step.
-- **One uniform namespace.** Both planes use the same reversible mapping (`:` → `_`, `.` → `__`), so `domain:devices.list` reaches the model as `domain_devices__list`. The canonical id stays the audit identity.
-- **Duplicate paths are rejected for the whole request.** If a domain operation appears both as a direct tool and as a contextual frontend declaration, the server returns **409 `CATALOG_COLLISION`** and records `catalog.collision` in the audit log. One operation, one model-visible path.
+- **One uniform namespace, reversed by map only.** Both planes use the same encoding (`:` → `_`, `.` → `__`), so `domain:devices.list` reaches the model as `domain_devices__list`. Encoding is *not* reversible by string surgery: a name that would exceed 64 characters is shortened and hashed, and `decodeWireName` refuses those rather than returning a plausible wrong id. The browser reverses through `toolset.wireNameMap()`; the server captures names as it assigns them. A name that cannot be mapped is **withheld from the model** and reported as `catalog.undecodable` — a capability that cannot be audited under its canonical id is not offered at all.
+- **Duplicate paths cost the duplicate, not the turn.** If a domain operation appears both as a direct tool and as a contextual frontend declaration, v2 drops the frontend declaration, keeps the governed server tool, records `catalog.collision` in the audit log, warns in the Inspector, and runs the step. v1 returns **409 `CATALOG_COLLISION`** instead. Across a large codebase a double-exposure is a matter of when, and taking down the whole assistant is a disproportionate response to one misconfigured capability — [build-time guards](../specs/production-scalability.md) catch it earlier.
+- **No silent reduction.** Every drop — collision, truncation, undecodable name, or an audit entry dropped because a reader fell behind — emits a frame. A gap the Inspector does not know about reads as "nothing happened".
 
 ### Orphaned server calls
 
@@ -330,9 +398,10 @@ Distinct from capability errors — these are transport and runtime conditions:
 
 | Code | HTTP | Meaning |
 |---|---|---|
-| `PROTOCOL_VERSION_MISMATCH` | 409 | Browser and server speak different versions. Reload |
-| `PROTOCOL_DECODE_ERROR` | 400 | Malformed request or frame |
-| `CATALOG_COLLISION` | 409 | One operation exposed through two model-visible paths |
+| `PROTOCOL_VERSION_MISMATCH` | 409 | The request names a version the server does not serve. Reload. A request that omits `protocolVersion` entirely is malformed, not a mismatch |
+| `PROTOCOL_DECODE_ERROR` | 400 | Malformed request or frame. Never used for a legal catalog that is merely too large |
+| `CATALOG_TOO_LARGE` | 413 | A named limit was exceeded; the message carries plane, count and limit |
+| `CATALOG_COLLISION` | 409 | One operation exposed through two model-visible paths. **v1 only** — under v2 the duplicate is dropped and the turn continues |
 | `MODEL_NOT_CONFIGURED` | 503 | No live provider configured |
 | `MODEL_TIMEOUT` | — | No chunk within the inactivity window |
 | `MODEL_ERROR` | — | The provider rejected the request |

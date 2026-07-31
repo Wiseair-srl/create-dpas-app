@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findCatalogCollisions } from "./catalog";
+import type { AgentSurfaceSnapshot, AgentToolset } from "@agent-surface/core";
+import { buildFrontendToolDescriptors, findCatalogCollisions } from "./catalog";
 import { frontendResultToModelValue, missingToolResult } from "./errors";
 import {
   ChatStepRequestSchema,
@@ -7,24 +8,71 @@ import {
   encodeFrame,
   type ChatStepFrame,
 } from "./protocol";
-import { canonicalIdFromWireName, domainToolName, encodeWireName } from "./wire-names";
+import { domainToolName, encodeWireName } from "./wire-names";
 
 describe("wire names", () => {
-  it("round-trips both planes through one convention", () => {
+  it("encodes both planes through one convention", () => {
     expect(encodeWireName("view:devices.table.selectRows")).toBe(
       "view_devices__table__selectRows",
     );
     expect(domainToolName("devices.list")).toBe("domain_devices__list");
-    expect(canonicalIdFromWireName("view_devices__table__selectRows")).toBe(
-      "view:devices.table.selectRows",
-    );
-    expect(canonicalIdFromWireName("domain_devices__list")).toBe("domain:devices.list");
   });
 
-  it("strips multi-instance suffixes before decoding", () => {
-    expect(canonicalIdFromWireName("view_devices__table__selectRows_at_main")).toBe(
-      "view:devices.table.selectRows",
+  it("keeps every encoded name inside the 64-character wire limit", () => {
+    const long = domainToolName(
+      "devices.reallyLongComponentName.withDeeplyNestedPath.andAnotherSegment.selectAllRows",
     );
+    expect(long.length).toBeLessThanOrEqual(64);
+  });
+});
+
+/**
+ * D30: a shortened wire name is not reversible by string surgery, and the
+ * canonical id is the audit identity — so the projection reads the toolset's
+ * authoritative map and withholds anything absent from it.
+ */
+describe("catalog projection", () => {
+  const emptySnapshot = {
+    components: [],
+    procedures: [],
+  } as unknown as AgentSurfaceSnapshot;
+
+  const toolsetWith = (
+    tools: Array<{ name: string }>,
+    wireNames: Record<string, string>,
+  ): AgentToolset =>
+    ({
+      tools: () =>
+        tools.map((t) => ({
+          ...t,
+          description: "d",
+          inputSchema: {},
+          // Volatile half lives here, never in `description` (D28).
+          state: { available: true },
+        })),
+      wireNameMap: () => new Map(Object.entries(wireNames)),
+    }) as unknown as AgentToolset;
+
+  it("takes canonical ids from the map, not from the wire name", () => {
+    const { descriptors, undecodable } = buildFrontendToolDescriptors(
+      toolsetWith([{ name: "view_devices__table__selectRows_0_abc123" }], {
+        view_devices__table__selectRows_0_abc123: "view:devices.table.selectAllTheVisibleRows",
+      }),
+      emptySnapshot,
+    );
+
+    expect(undecodable).toEqual([]);
+    expect(descriptors[0]?.canonicalId).toBe("view:devices.table.selectAllTheVisibleRows");
+  });
+
+  it("withholds a tool whose wire name does not map, rather than guessing", () => {
+    const { descriptors, undecodable } = buildFrontendToolDescriptors(
+      toolsetWith([{ name: "view_devices__table__unmapped" }], {}),
+      emptySnapshot,
+    );
+
+    expect(descriptors).toEqual([]);
+    expect(undecodable).toEqual(["view_devices__table__unmapped"]);
   });
 });
 
@@ -37,7 +85,9 @@ describe("duplicate-path detection", () => {
     expect(collisions).toEqual(["domain:devices.disable"]);
   });
 
-  it("accepts the shipped configuration (no collisions)", () => {
+  // The shipped configuration is checked against the real registry and a
+  // mounted surface in `catalog-guards.test.tsx`; this covers the predicate.
+  it("passes disjoint planes", () => {
     expect(
       findCatalogCollisions(
         [{ canonicalId: "domain:devices.disable" }],

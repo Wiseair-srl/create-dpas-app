@@ -99,6 +99,12 @@ function build(): SurfaceBundle {
     route: () => ({ path: routeRef.current }),
     // Deny-by-default baseline: with no authenticated user there is no surface.
     policies: [authenticated()],
+    // Keep a contextual binding's live text OUT of `description` (D28). The
+    // description then changes only when code or the mount set changes, which
+    // is what lets the provider tool block be prompt-prefix cached across the
+    // steps of a turn; the live text rides in `contextualNote` and is rendered
+    // outside the tool definitions.
+    snapshotMergesContextualNote: false,
   });
 
   const bridge = createOrpcAgentBridge<DomainClientTree>({
@@ -139,11 +145,9 @@ export function setDomainClientFactoryForTests(factory: () => DomainClientTree) 
 
 export function resetSurfaceForTests() {
   const g = globalThis as Record<string, unknown>;
-  // The host toolset (src/agent/host/toolset.ts) caches against this
-  // registry instance; drop it together with the registry.
-  const toolset = g["__dpasHostToolset"] as { dispose(): void } | undefined;
-  toolset?.dispose();
-  delete g["__dpasHostToolset"];
+  // The host toolsets (src/agent/host/toolset.ts) are cached in a WeakMap
+  // keyed by this registry, so disposing it makes them unreachable — nothing
+  // to clear by hand.
   const current = g[globalKey] as SurfaceBundle | undefined;
   current?.registry.dispose();
   delete g[globalKey];

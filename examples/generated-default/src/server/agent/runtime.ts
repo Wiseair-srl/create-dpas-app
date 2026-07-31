@@ -8,8 +8,10 @@ import {
   type AgentAuditEvent,
   type AgentRuntime,
 } from "@orpc-agent/core";
+import { createPgAuditSink } from "@orpc-agent/postgres";
 import { router } from "@/server/orpc/router";
 import { getAuditLog } from "@/server/audit/log";
+import { getGovernanceAuditQuery } from "@/server/audit/postgres";
 import type { AppContext } from "@/server/orpc/context";
 
 /**
@@ -56,9 +58,20 @@ function auditSink(event: AgentAuditEvent) {
 }
 
 function buildRuntime(): AgentRuntime<AppContext> {
+  // Governance events also go to their canonical table when durable audit is
+  // configured. That record is the library's own `AgentAuditEvent` shape, and
+  // it is NOT a substitute for the application log above: domain and host
+  // entries never pass through this runtime.
+  //
+  // `verbose` stays off deliberately. Turning it on restores the full
+  // `capabilityIds` array on `capabilities.discovered` — ~6 KB per discovery
+  // at 300 capabilities, per step, per turn, per concurrent user.
+  const query = getGovernanceAuditQuery();
+  const sinks = query ? [auditSink, createPgAuditSink({ query })] : [auditSink];
+
   return createAgentRuntime<AppContext>({
     governance,
-    audit: { sinks: [auditSink], strict: false },
+    audit: { sinks, strict: false },
   });
 }
 

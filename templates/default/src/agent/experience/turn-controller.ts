@@ -1,7 +1,8 @@
 "use client";
 
 import { getSurfaceRegistry } from "@/agent/surface/registry";
-import { getHostToolset } from "@/agent/host/toolset";
+import { currentPathname, getHostToolset } from "@/agent/host/toolset";
+import { currentCatalogMode } from "@/agent/host/catalog-mode";
 import { newTurnId } from "@/agent/host/identity";
 import { runTurn } from "@/agent/host/transport-client";
 import { inspector, type CatalogRow } from "@/agent/inspector/inspector-store";
@@ -26,6 +27,12 @@ export async function startLiveTurn(text: string): Promise<void> {
   const abort = new AbortController();
   activeAbort = abort;
   const turnId = newTurnId();
+  // Captured once per turn: the catalog must not shift underneath a run if
+  // the user navigates mid-turn.
+  const pathname = currentPathname();
+  // Captured with the route: switching projection mid-turn would change what
+  // the model was told it could do, halfway through it doing it.
+  const mode = currentCatalogMode();
 
   store.appendUser(text);
   store.setRunning("live");
@@ -49,7 +56,9 @@ export async function startLiveTurn(text: string): Promise<void> {
       turnId,
       messages: history,
       registry: getSurfaceRegistry(),
-      toolset: getHostToolset(),
+      toolset: getHostToolset(pathname, mode),
+      pathname,
+      mode,
       signal: abort.signal,
       events: {
         onTextDelta: (delta) => useMessageStore.getState().appendAssistantText(delta),

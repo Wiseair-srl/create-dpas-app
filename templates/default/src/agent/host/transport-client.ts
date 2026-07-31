@@ -6,12 +6,16 @@ import { buildFrontendToolDescriptors } from "./catalog";
 import { dispatchFrontendToolCall } from "./client-dispatch";
 import { HOST_CONSUMER } from "./identity";
 import {
+  CATALOG_LIMITS,
+  catalogTooLargeMessage,
   createFrameDecoder,
   PROTOCOL_VERSION,
   type ChatStepFrame,
   type DomainToolInfo,
   type WireModelMessage,
 } from "./protocol";
+import { scopeForRoute } from "./scope";
+import type { CatalogMode } from "./catalog-mode";
 
 /**
  * The browser half of the Agent Host loop (ADR-0002).
@@ -60,6 +64,10 @@ export interface RunTurnOptions {
   messages: WireModelMessage[];
   registry: AgentSurfaceRegistry;
   toolset: AgentToolset;
+  /** The route this turn runs on; scopes the catalog on both planes. */
+  pathname: string;
+  /** How the surface is projected: one tool per capability, or three. */
+  mode: CatalogMode;
   signal: AbortSignal;
   events: TurnEvents;
 }
@@ -71,7 +79,7 @@ export interface TurnOutcome {
 }
 
 export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
-  const { conversationId, turnId, registry, toolset, signal, events } = options;
+  const { conversationId, turnId, registry, toolset, pathname, mode, signal, events } = options;
   let messages = [...options.messages];
   const startedAt = performance.now();
   const failureCounts = new Map<string, number>();
@@ -86,8 +94,55 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
       return { messages, status: "error" };
     }
 
-    const snapshot = registry.snapshot({ consumer: HOST_CONSUMER, includeUnavailable: true });
-    const frontendTools = buildFrontendToolDescriptors(toolset, snapshot);
+    // Same scope on both halves: the toolset was built with it, so the
+    // snapshot that supplies the metadata index must agree or descriptors
+    // fall through to defaults.
+    const scope = scopeForRoute(pathname);
+    const snapshot = registry.snapshot({
+      consumer: HOST_CONSUMER,
+      includeUnavailable: true,
+      ...(scope.length > 0 ? { scope: [...scope] } : {}),
+    });
+    const {
+      descriptors: frontendTools,
+      state: frontendState,
+      undecodable,
+    } = buildFrontendToolDescriptors(toolset, snapshot, mode);
+
+    // Pre-flight. Exceeding a named limit is reported here rather than
+    // discovered as a 400 that says "malformed" about a perfectly legal
+    // request (§1.1).
+    if (frontendTools.length > CATALOG_LIMITS.maxFrontendTools) {
+      events.onError({
+        code: "CATALOG_TOO_LARGE",
+        message: catalogTooLargeMessage(
+          "frontend",
+          frontendTools.length,
+          CATALOG_LIMITS.maxFrontendTools,
+        ),
+      });
+      return { messages, status: "error" };
+    }
+    if (messages.length > CATALOG_LIMITS.maxMessages) {
+      events.onError({
+        code: "CATALOG_TOO_LARGE",
+        message: catalogTooLargeMessage("messages", messages.length, CATALOG_LIMITS.maxMessages),
+      });
+      return { messages, status: "error" };
+    }
+
+    // Withholding a tool is a reduction of the catalog, so it is reported
+    // rather than absorbed (invariant 7).
+    if (undecodable.length > 0) {
+      inspector.push({
+        lane: "host",
+        type: "catalog.undecodable",
+        status: "error",
+        summary: `${undecodable.length} tool(s) withheld — wire name did not map to a canonical id`,
+        correlation: { conversationId, turnId },
+        data: { wireNames: undecodable },
+      });
+    }
 
     inspector.push({
       lane: "host",
@@ -108,8 +163,17 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
           conversationId,
           turnId,
           stepIndex,
+          pathname,
           messages,
-          frontendTools,
+          catalog: {
+            mode,
+            ...(scope.length > 0 ? { scope: [...scope] } : {}),
+            frontendTools,
+            frontendState,
+            ...(undecodable.length > 0
+              ? { truncated: { dropped: undecodable.length, reason: "undecodable" as const } }
+              : {}),
+          },
         }),
       });
     } catch (error) {

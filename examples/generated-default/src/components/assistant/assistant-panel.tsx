@@ -1,7 +1,17 @@
 "use client";
 
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
-import { Bot, KeyRound, Play, RotateCcw, ScanSearch, Settings2, Square } from "lucide-react";
+import {
+  Bot,
+  Check,
+  ClipboardCopy,
+  KeyRound,
+  Play,
+  RotateCcw,
+  ScanSearch,
+  Settings2,
+  Square,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +20,12 @@ import { useAppConfig } from "@/lib/use-app-config";
 import { runGuidedDemo, GOLDEN_PROMPT } from "@/agent/demo/scenario";
 import { ConfirmationCard } from "@/agent/experience/confirmation-card";
 import { useMessageStore } from "@/agent/experience/message-store";
+import { copyConversationReport } from "@/agent/experience/conversation-report";
 import { useDpasAssistantRuntime } from "@/agent/experience/runtime-adapter";
 import { startLiveTurn, cancelActiveTurn } from "@/agent/experience/turn-controller";
 import { InspectorPanel } from "@/components/agent-inspector/inspector-panel";
 import { ModelSettingsDialog } from "./model-settings";
+import { CatalogModeToggle } from "./catalog-mode-toggle";
 import { AssistantComposer, AssistantThread } from "./thread";
 
 /**
@@ -56,10 +68,13 @@ export function AssistantPanel() {
         <Badge variant={live ? "view" : "neutral"} data-testid="assistant-mode">
           {config.data?.label ?? "…"}
         </Badge>
+        <div className="ml-auto">
+          <CatalogModeToggle />
+        </div>
         <Button
           variant="ghost"
           size="icon"
-          className="ml-auto h-7 w-7 text-muted-foreground"
+          className="h-7 w-7 text-muted-foreground"
           aria-label="Model settings"
           title="Model settings"
           data-testid="open-model-settings"
@@ -236,13 +251,54 @@ function DemoBar({
             <RotateCcw aria-hidden className="h-3.5 w-3.5" />
             Clear
           </Button>
+          <CopyConversationButton />
         </>
       ) : (
-        <Button size="sm" variant="secondary" onClick={onStop} data-testid="stop-run">
-          <Square aria-hidden className="h-3 w-3 fill-current" />
-          Stop {running === "demo" ? "demo" : "run"}
-        </Button>
+        <>
+          <Button size="sm" variant="secondary" onClick={onStop} data-testid="stop-run">
+            <Square aria-hidden className="h-3 w-3 fill-current" />
+            Stop {running === "demo" ? "demo" : "run"}
+          </Button>
+          {/* Available mid-run too: a run that is looping is exactly the one
+              worth capturing, and waiting for it to finish loses the state. */}
+          <CopyConversationButton />
+        </>
       )}
     </div>
+  );
+}
+
+/**
+ * Copies the conversation, the tool calls with their inputs and results, the
+ * catalog mode and scope, and the recent trace — the things a bug report needs
+ * and a screenshot cannot carry.
+ */
+function CopyConversationButton() {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const entries = useMessageStore((s) => s.entries.length);
+
+  const copy = async () => {
+    const ok = await copyConversationReport();
+    setState(ok ? "copied" : "failed");
+    window.setTimeout(() => setState("idle"), 2000);
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={copy}
+      disabled={entries === 0}
+      className="ml-auto text-muted-foreground"
+      title="Copy the conversation, tool calls and trace as Markdown"
+      data-testid="copy-conversation"
+    >
+      {state === "copied" ? (
+        <Check aria-hidden className="h-3.5 w-3.5 text-ok" />
+      ) : (
+        <ClipboardCopy aria-hidden className="h-3.5 w-3.5" />
+      )}
+      {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : "Copy"}
+    </Button>
   );
 }

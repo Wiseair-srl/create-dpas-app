@@ -1,7 +1,7 @@
 "use client";
 
 import { encodeWireName } from "@agent-surface/core";
-import { getHostToolset } from "@/agent/host/toolset";
+import { currentPathname, getHostToolset } from "@/agent/host/toolset";
 import { frontendResultToModelValue } from "@/agent/host/errors";
 import { newTurnId } from "@/agent/host/identity";
 import { inspector } from "@/agent/inspector/inspector-store";
@@ -45,7 +45,13 @@ export async function runGuidedDemo(signal: AbortSignal): Promise<void> {
     new Promise<void>((resolve) => setTimeout(resolve, STEP_PAUSE_MS));
 
   const exec = async (canonicalId: string, input: unknown): Promise<StepResult> => {
-    const toolset = getHostToolset();
+    // Pinned to direct mode on purpose. The guided demo is a scripted local
+    // walkthrough — it names capabilities itself and never involves a model —
+    // so it resolves tools by encoded capability name. Meta mode projects three
+    // generic tools instead, and none of those names would match. The catalog
+    // mode toggle shapes what a MODEL is offered in live chat; it has nothing
+    // to demonstrate here.
+    const toolset = getHostToolset(currentPathname(), "direct");
     const wireName = encodeWireName(canonicalId);
     const tool = toolset
       .tools()

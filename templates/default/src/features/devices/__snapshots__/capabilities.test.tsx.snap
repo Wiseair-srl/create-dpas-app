@@ -366,7 +366,8 @@ exports[`capability discovery > matches the committed semantic surface snapshot 
         "instanceId": "default",
         "type": "devices.table",
       },
-      "description": "Disable the given devices. Destructive: they stop reporting data. Currently bound to the 0 selected device(s).",
+      "contextualNote": "Currently bound to the 0 selected device(s).",
+      "description": "Disable the given devices. Destructive: they stop reporting data.",
       "effect": "destructive",
       "inputSchema": {
         "additionalProperties": false,

@@ -13,11 +13,14 @@ import { resolveSession } from "@/server/auth/session";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  // Reading the audit trail requires a resolved session, like everything else.
-  resolveSession(request.headers.get("cookie"));
+  // Reading the audit trail requires a resolved session, like everything else
+  // — and returns only that actor's entries. The log is process-wide and
+  // shared, so an unfiltered read here would disclose every concurrent user's
+  // activity to whoever polls this route.
+  const session = resolveSession(request.headers.get("cookie"));
   const url = new URL(request.url);
   const since = url.searchParams.get("since");
-  const entries = getAuditLog().entries();
+  const entries = getAuditLog().entries({ actorId: session.userId });
   const startIndex = since ? entries.findIndex((entry) => entry.id === since) + 1 : 0;
   return NextResponse.json({ entries: entries.slice(Math.max(0, startIndex)).slice(-25) });
 }

@@ -288,19 +288,92 @@ describe("chat step composition", () => {
     }
   });
 
-  it("rejects a duplicate model-visible path for one domain operation", async () => {
-    const contextualList: WireToolDescriptor = {
-      ...filtersTool,
-      wireName: "domain_devices__list",
-      canonicalId: "domain:devices.list",
-      plane: "domain",
-    };
+  const contextualList: WireToolDescriptor = {
+    ...filtersTool,
+    wireName: "domain_devices__list",
+    canonicalId: "domain:devices.list",
+    plane: "domain",
+  };
+
+  it("rejects a duplicate model-visible path for one domain operation (v1)", async () => {
     const response = await handleChatStep(
       request(stepBody({ frontendTools: [contextualList] })),
     );
     expect(response.status).toBe(409);
     const body = (await response.json()) as { error: { code: string } };
     expect(body.error.code).toBe("CATALOG_COLLISION");
+  });
+
+  it("degrades a collision to a dropped duplicate under v2 and completes the turn", async () => {
+    // One misconfigured capability must not take down the whole assistant.
+    const response = await handleChatStep(
+      request({
+        protocolVersion: 2,
+        conversationId: "cnv_t",
+        turnId: "trn_t",
+        stepIndex: 0,
+        pathname: "/dashboard",
+        messages: [{ role: "user", content: "list the devices" }],
+        catalog: {
+          mode: "direct",
+          scope: ["devices"],
+          frontendTools: [filtersTool, contextualList],
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const frames = await readFrames(response);
+    // The turn ran, and the drop was reported rather than absorbed.
+    expect(frames.some((f) => f.type === "step-finish")).toBe(true);
+    const notice = frames.find(
+      (f) => f.type === "inspector" && f.eventType === "catalog.collision",
+    );
+    expect(notice).toBeDefined();
+    expect(notice && "data" in notice ? notice.data : undefined).toMatchObject({
+      capabilityIds: ["domain:devices.list"],
+    });
+  });
+
+  it("reports the effective mode and scope on step-start", async () => {
+    const response = await handleChatStep(
+      request({
+        protocolVersion: 2,
+        conversationId: "cnv_t",
+        turnId: "trn_t",
+        stepIndex: 0,
+        pathname: "/dashboard",
+        messages: [{ role: "user", content: "hello" }],
+        catalog: { mode: "direct", scope: ["devices"], frontendTools: [filtersTool] },
+      }),
+    );
+
+    const frames = await readFrames(response);
+    const start = frames.find((f) => f.type === "step-start");
+    expect(start).toMatchObject({ catalogMode: "direct", scope: ["devices"] });
+  });
+
+  it("keeps the route floor when the browser asks for a token it lacks", async () => {
+    const response = await handleChatStep(
+      request({
+        protocolVersion: 2,
+        conversationId: "cnv_t",
+        turnId: "trn_t",
+        stepIndex: 0,
+        pathname: "/dashboard",
+        messages: [{ role: "user", content: "hello" }],
+        // Asking for something the route does not grant yields nothing extra,
+        // and must not blank the catalog either.
+        catalog: { mode: "direct", scope: ["billing"], frontendTools: [filtersTool] },
+      }),
+    );
+
+    const frames = await readFrames(response);
+    const start = frames.find((f) => f.type === "step-start");
+    expect(start).toMatchObject({ scope: ["devices"] });
+    if (start?.type === "step-start") {
+      expect(start.domainTools.length).toBeGreaterThan(0);
+    }
   });
 
   it("rejects protocol version mismatches with a typed error", async () => {
@@ -313,6 +386,39 @@ describe("chat step composition", () => {
   it("rejects malformed requests", async () => {
     const response = await handleChatStep(request({ nonsense: true }));
     expect(response.status).toBe(400);
+  });
+
+  /**
+   * The scope the host forwards has to actually reach `describe`, not merely
+   * ride along in the request. Every capability in this template carries the
+   * same tag, so scoping to it cannot demonstrate exclusion — this drives the
+   * runtime directly to prove the mechanism the host depends on.
+   */
+  it("forwards scope to discovery, which narrows the domain catalog", async () => {
+    const { getAgentRuntime } = await import("@/server/agent/runtime");
+    const { createContextForSession } = await import("@/server/orpc/context");
+    const { resolveSession } = await import("@/server/auth/session");
+
+    const session = resolveSession(null);
+    const actor = { id: session.userId, kind: "user" as const };
+    const context = createContextForSession(session);
+    const runtime = getAgentRuntime();
+
+    const unscoped = await runtime.describe("aiSdk", { actor, context });
+    const inScope = await runtime.describe("aiSdk", {
+      actor,
+      context,
+      scope: { tags: ["devices"] },
+    });
+    const outOfScope = await runtime.describe("aiSdk", {
+      actor,
+      context,
+      scope: { tags: ["billing"] },
+    });
+
+    expect(unscoped.length).toBeGreaterThan(0);
+    expect(inScope.map((d) => d.id).sort()).toEqual(unscoped.map((d) => d.id).sort());
+    expect(outOfScope).toEqual([]);
   });
 
   it("returns MODEL_NOT_CONFIGURED in demo mode instead of pretending", async () => {

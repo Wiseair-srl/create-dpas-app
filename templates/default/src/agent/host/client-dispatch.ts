@@ -3,7 +3,7 @@
 import type { AgentToolset, JsonValue } from "@agent-surface/core";
 import { inspector } from "@/agent/inspector/inspector-store";
 import { frontendResultToModelValue, missingToolResult, type ModelToolResult } from "./errors";
-import { canonicalIdFromWireName } from "./wire-names";
+import { canonicalIdOfCall } from "./wire-names";
 
 /**
  * Browser-side dispatch: resolves a frontend tool-call against the LIVE
@@ -22,8 +22,15 @@ export async function dispatchFrontendToolCall(
   call: FrontendToolCall,
   context: { conversationId: string; turnId: string },
 ): Promise<ModelToolResult> {
-  const canonicalId = canonicalIdFromWireName(call.wireName) ?? call.wireName;
   const tool = toolset.tools().find((t) => t.name === call.wireName);
+  // Authoritative reversal (D30), then the meta-mode correction: under
+  // `surface_act` the operation is named in the arguments, not by the tool.
+  // A miss means the model named a tool this catalog never offered, which
+  // `missingToolResult` below rejects — the wire name is only ever a label for
+  // that rejection, never an audit identity.
+  const canonicalId =
+    canonicalIdOfCall(call.wireName, call.input, toolset.wireNameMap().get(call.wireName)) ??
+    call.wireName;
 
   inspector.push({
     lane: "host",

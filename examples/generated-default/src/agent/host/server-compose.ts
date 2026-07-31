@@ -6,14 +6,20 @@ import { getAuditLog, type AuditEntry } from "@/server/audit/log";
 import { resolveSession } from "@/server/auth/session";
 import { buildAssistantAgent, RUN_LIMITS } from "@/agent/runtime/mastra";
 import {
+  CATALOG_LIMITS,
+  catalogTooLargeMessage,
   ChatStepRequestSchema,
   encodeFrame,
+  normalizeChatStep,
+  renderCapabilityState,
+  SUPPORTED_PROTOCOL_VERSIONS,
   type ChatStepFrame,
   type DomainToolInfo,
   type WireModelMessage,
 } from "./protocol";
 import { findCatalogCollisions } from "./catalog";
-import { canonicalIdFromWireName, domainToolName } from "./wire-names";
+import { resolveScope } from "./scope";
+import { canonicalIdOfCall, domainToolName } from "./wire-names";
 import { newStepId } from "./identity";
 
 /**
@@ -30,10 +36,18 @@ export async function handleChatStep(request: Request): Promise<Response> {
   const body = await request.json().catch(() => null);
   const parsed = ChatStepRequestSchema.safeParse(body);
   if (!parsed.success) {
+    // A request that NAMES an unsupported version is a version mismatch; one
+    // that omits the field entirely is simply malformed. Conflating them would
+    // tell a browser to reload when the payload is the problem.
+    const declaresVersion =
+      body !== null && typeof body === "object" && "protocolVersion" in body;
+    const claimed = declaresVersion
+      ? (body as { protocolVersion?: unknown }).protocolVersion
+      : undefined;
     const isVersionIssue =
-      body && typeof body === "object" && "protocolVersion" in body
-        ? (body as { protocolVersion?: unknown }).protocolVersion !== 1
-        : false;
+      declaresVersion &&
+      (typeof claimed !== "number" ||
+        !(SUPPORTED_PROTOCOL_VERSIONS as readonly number[]).includes(claimed));
     return errorResponse(
       isVersionIssue ? 409 : 400,
       isVersionIssue ? "PROTOCOL_VERSION_MISMATCH" : "PROTOCOL_DECODE_ERROR",
@@ -42,10 +56,14 @@ export async function handleChatStep(request: Request): Promise<Response> {
         : "Malformed chat step request.",
     );
   }
-  const step = parsed.data;
+  const step = normalizeChatStep(parsed.data);
 
   const session = resolveSession(request.headers.get("cookie"));
   const context = createContextForSession(session);
+  // Allocated before composition so every host-sourced audit record can name
+  // the step it belongs to — which is what lets the inspector subscription
+  // below recognise its own entries.
+  const stepId = newStepId();
 
   const agent = buildAssistantAgent();
   if (!agent) {
@@ -57,19 +75,88 @@ export async function handleChatStep(request: Request): Promise<Response> {
   }
 
   // Domain half of the catalog: governed, per-actor, deny-by-default.
+  //
+  // Wire names are captured as they are assigned. Reversing them afterwards is
+  // not possible — a shortened name decodes to nothing (D30) — and the
+  // canonical id is the audit identity, so it is recorded at the only point it
+  // is known for certain.
+  // Scope is a REQUEST from the browser, intersected with the route's floor
+  // on this side. It never widens, and it is discovery shaping only — an
+  // out-of-scope capability stays fully invocable by an authorized actor.
+  const scope = resolveScope(step.pathname, step.requestedScope);
+
+  const domainCanonicalByWire = new Map<string, string>();
   const domainTools = await toAISDKTools(getAgentRuntime(), {
     actor: { id: session.userId, kind: "user" },
     context,
-    toolNaming: domainToolName,
+    // Forwarded to `describe`, so the discovery policies of everything
+    // outside the scope never run — not merely filtered afterwards.
+    ...(scope.length > 0 ? { scope: { tags: [...scope] } } : {}),
+    toolNaming: (capabilityId) => {
+      const wireName = domainToolName(capabilityId);
+      domainCanonicalByWire.set(wireName, `domain:${capabilityId}`);
+      return wireName;
+    },
   });
-  const domainInfo: DomainToolInfo[] = Object.entries(domainTools).map(([wireName, t]) => ({
-    wireName,
-    canonicalId: canonicalIdFromWireName(wireName) ?? wireName,
-    description: (t as { description?: string }).description ?? "",
-    requiresApproval: false,
-  }));
+
+  // A capability may override its own tool name through
+  // `meta.adapters.aiSdk.toolName`, which the adapter honours ahead of
+  // `toolNaming` — so the capture above can miss one. Anything unmapped is
+  // withheld rather than offered under a guessed identity (§4.4).
+  const undecodableDomain = Object.keys(domainTools).filter(
+    (wireName) => !domainCanonicalByWire.has(wireName),
+  );
+  for (const wireName of undecodableDomain) delete domainTools[wireName];
+  if (undecodableDomain.length > 0) {
+    getAuditLog().record({
+      source: "host",
+      type: "catalog.undecodable",
+      actorId: session.userId,
+      stepId,
+      data: { wireNames: undecodableDomain },
+    });
+  }
+
+  const domainInfo: DomainToolInfo[] = Object.entries(domainTools).flatMap(([wireName, t]) => {
+    const canonicalId = domainCanonicalByWire.get(wireName);
+    if (!canonicalId) return [];
+    return [
+      {
+        wireName,
+        canonicalId,
+        description: (t as { description?: string }).description ?? "",
+        requiresApproval: false,
+      },
+    ];
+  });
+
+  // One lookup for both planes. Frontend descriptors already carry their
+  // canonical id on the wire, so nothing is reversed here either.
+  const frontendCanonicalByWire = new Map(
+    step.frontendTools.map((d) => [d.wireName, d.canonicalId] as const),
+  );
+  const canonicalIdOf = (wireName: string): string =>
+    domainCanonicalByWire.get(wireName) ?? frontendCanonicalByWire.get(wireName) ?? wireName;
+
+  /**
+   * The audit identity of a CALL. Identical to `canonicalIdOf` in direct mode;
+   * in meta mode the model calls `surface_act` and names its target in the
+   * arguments, so the tool name would collapse every action in the application
+   * into one identity (invariant 8).
+   */
+  const canonicalIdOfToolCall = (wireName: string, input: unknown): string =>
+    canonicalIdOfCall(wireName, input, canonicalIdOf(wireName)) ?? wireName;
+
+  /** tool-call id → the operation it named, so call and result agree. */
+  const canonicalByToolCallId = new Map<string, string>();
 
   // Duplicate-path validation: one domain operation, one model-visible path.
+  //
+  // v1 aborted the whole turn on a collision. v2 drops the duplicate FRONTEND
+  // declaration and keeps the governed server tool: across a large codebase a
+  // double-exposure is a matter of when, and taking down the assistant is a
+  // wildly disproportionate blast radius for one misconfigured capability.
+  // Build-time detection catches it earlier (§6).
   const collisions = findCatalogCollisions(
     step.frontendTools,
     domainInfo.map((info) => info.canonicalId),
@@ -79,20 +166,52 @@ export async function handleChatStep(request: Request): Promise<Response> {
       source: "host",
       type: "catalog.collision",
       actorId: session.userId,
+      stepId,
       data: { capabilityIds: collisions },
     });
+    if (step.protocolVersion === 1) {
+      return errorResponse(
+        409,
+        "CATALOG_COLLISION",
+        `Domain operation(s) exposed through two paths: ${collisions.join(", ")}. ` +
+          "A capability must be either a direct server tool or a contextual surface reference, never both.",
+      );
+    }
+  }
+  const collided = new Set(collisions);
+  const frontendTools =
+    collided.size > 0
+      ? step.frontendTools.filter((descriptor) => !collided.has(descriptor.canonicalId))
+      : step.frontendTools;
+
+  // Server-side limit enforcement. The browser checks before posting; this is
+  // the authority, and it names plane, count and limit rather than reporting
+  // a legal-but-large catalog as malformed.
+  const totalTools = frontendTools.length + domainInfo.length;
+  const overLimit: { plane: "frontend" | "domain" | "total"; count: number; limit: number } | undefined =
+    frontendTools.length > CATALOG_LIMITS.maxFrontendTools
+      ? {
+          plane: "frontend",
+          count: frontendTools.length,
+          limit: CATALOG_LIMITS.maxFrontendTools,
+        }
+      : domainInfo.length > CATALOG_LIMITS.maxDomainTools
+        ? { plane: "domain", count: domainInfo.length, limit: CATALOG_LIMITS.maxDomainTools }
+        : totalTools > CATALOG_LIMITS.maxTotalTools
+          ? { plane: "total", count: totalTools, limit: CATALOG_LIMITS.maxTotalTools }
+          : undefined;
+  if (overLimit) {
     return errorResponse(
-      409,
-      "CATALOG_COLLISION",
-      `Domain operation(s) exposed through two paths: ${collisions.join(", ")}. ` +
-        "A capability must be either a direct server tool or a contextual surface reference, never both.",
+      413,
+      "CATALOG_TOO_LARGE",
+      catalogTooLargeMessage(overLimit.plane, overLimit.count, overLimit.limit),
     );
   }
 
   // Frontend declarations become execute-less AI SDK tools: the model can
   // call them; execution suspends back to the browser.
   const clientTools: ToolSet = Object.fromEntries(
-    step.frontendTools.map((descriptor) => [
+    frontendTools.map((descriptor) => [
       descriptor.wireName,
       tool({
         description: descriptor.description,
@@ -111,7 +230,6 @@ export async function handleChatStep(request: Request): Promise<Response> {
   const domainResults = new Map<string, ToolExecutionRecord>();
   const recordedDomainTools = withResultCapture(domainTools, domainResults);
 
-  const stepId = newStepId();
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -121,9 +239,22 @@ export async function handleChatStep(request: Request): Promise<Response> {
       };
 
       // Forward server-side audit activity (orpc-agent governance + domain
-      // records) to the browser inspector while this step runs. Single-user
-      // demo scope: a shared log, filtered by time of subscription.
-      const unsubscribe = getAuditLog().subscribe((entry: AuditEntry) => {
+      // records) to THIS actor's inspector while this step runs.
+      //
+      // The log is process-wide: concurrent users write to it simultaneously.
+      // Forwarding it unfiltered would stream every other user's domain
+      // activity into this browser, so an entry is disclosed only when it is
+      // positively attributable to this session. An entry carrying no
+      // `actorId` is dropped rather than broadcast — the cost is that
+      // genuinely actor-less runtime events no longer reach the Inspector,
+      // which is the right trade against disclosing another tenant's.
+      const isThisActors = (entry: AuditEntry): boolean => {
+        if (entry.source === "host") return entry.stepId === stepId;
+        return entry.actorId !== undefined && entry.actorId === session.userId;
+      };
+
+      const subscription = getAuditLog().subscribe((entry: AuditEntry) => {
+        if (!isThisActors(entry)) return;
         write({
           type: "inspector",
           lane: entry.source === "domain" ? "domain" : "runtime",
@@ -150,9 +281,45 @@ export async function handleChatStep(request: Request): Promise<Response> {
           turnId: step.turnId,
           conversationId: step.conversationId,
           domainTools: domainInfo,
+          catalogMode: step.catalogMode,
+          scope: [...scope],
         });
 
-        const run = await agent.stream(step.messages as ModelMessage[], {
+        // Everything the host reduced, said out loud (invariant 7).
+        if (collisions.length > 0) {
+          write({
+            type: "inspector",
+            lane: "host",
+            eventType: "catalog.collision",
+            summary: `${collisions.length} duplicate path(s) dropped — kept the governed server tool`,
+            correlation: { conversationId: step.conversationId, turnId: step.turnId, stepId },
+            data: { capabilityIds: collisions },
+          });
+        }
+        if (step.truncated) {
+          write({
+            type: "inspector",
+            lane: "host",
+            eventType: "catalog.truncated",
+            summary: `browser dropped ${step.truncated.dropped} tool(s) — ${step.truncated.reason}`,
+            correlation: { conversationId: step.conversationId, turnId: step.turnId, stepId },
+            data: step.truncated,
+          });
+        }
+
+        // The volatile half goes AFTER the conversation, never in the tool
+        // block. Tool definitions sit at the front of the provider prompt, so
+        // folding live state into them would invalidate the cached prefix
+        // behind the whole conversation on every step; here it costs a few
+        // hundred tokens and invalidates nothing.
+        const stateBlock = renderCapabilityState(step.frontendState, frontendTools);
+        const modelMessages = (
+          stateBlock
+            ? [...step.messages, { role: "system", content: stateBlock }]
+            : step.messages
+        ) as ModelMessage[];
+
+        const run = await agent.stream(modelMessages, {
           toolsets: { domain: recordedDomainTools },
           clientTools,
           maxSteps: RUN_LIMITS.maxStepsPerRequest,
@@ -200,11 +367,16 @@ export async function handleChatStep(request: Request): Promise<Response> {
               const input = chunk.payload?.args ?? {};
               const executor = wireName in clientTools ? "browser" : "server";
               accumulator.toolCall(toolCallId, wireName, input, executor);
+              // Resolved once, from the arguments, and remembered — the result
+              // frame has no input to re-derive it from, and the two frames
+              // must name the same operation.
+              const canonicalId = canonicalIdOfToolCall(wireName, input);
+              canonicalByToolCallId.set(toolCallId, canonicalId);
               write({
                 type: "tool-call",
                 toolCallId,
                 wireName,
-                canonicalId: canonicalIdFromWireName(wireName) ?? wireName,
+                canonicalId,
                 executor,
                 input,
               });
@@ -219,7 +391,7 @@ export async function handleChatStep(request: Request): Promise<Response> {
                 type: "tool-result",
                 toolCallId,
                 wireName,
-                canonicalId: canonicalIdFromWireName(wireName) ?? wireName,
+                canonicalId: canonicalByToolCallId.get(toolCallId) ?? canonicalIdOf(wireName),
                 ok: !isErrorShaped(result),
                 result,
               });
@@ -267,7 +439,8 @@ export async function handleChatStep(request: Request): Promise<Response> {
             type: "tool-result",
             toolCallId: settled.toolCallId,
             wireName: settled.wireName,
-            canonicalId: canonicalIdFromWireName(settled.wireName) ?? settled.wireName,
+            canonicalId:
+              canonicalByToolCallId.get(settled.toolCallId) ?? canonicalIdOf(settled.wireName),
             ok: settled.ok,
             result: settled.result,
           });
@@ -280,11 +453,25 @@ export async function handleChatStep(request: Request): Promise<Response> {
           pendingToolCalls: accumulator.pendingBrowserCalls().map((call) => ({
             toolCallId: call.toolCallId,
             wireName: call.wireName,
-            canonicalId: canonicalIdFromWireName(call.wireName) ?? call.wireName,
+            canonicalId: canonicalIdOfToolCall(call.wireName, call.input),
             input: call.input,
           })),
         });
-        unsubscribe();
+        // A reader that fell behind had entries dropped rather than buffered.
+        // Say so: a gap the Inspector does not know about reads as "nothing
+        // happened" (invariant 7).
+        const dropped = subscription.dropped();
+        if (dropped > 0) {
+          write({
+            type: "inspector",
+            lane: "host",
+            eventType: "inspector.dropped",
+            summary: `${dropped} audit entr${dropped === 1 ? "y" : "ies"} dropped — reader fell behind`,
+            correlation: { conversationId: step.conversationId, turnId: step.turnId, stepId },
+            data: { dropped },
+          });
+        }
+        subscription.close();
         controller.close();
       }
     },
@@ -294,7 +481,9 @@ export async function handleChatStep(request: Request): Promise<Response> {
     headers: {
       "content-type": "application/x-ndjson; charset=utf-8",
       "cache-control": "no-store",
-      "x-dpas-protocol-version": "1",
+      // Echoes the version this exchange actually used, not the newest the
+      // server knows — v1 and v2 are served side by side (§10).
+      "x-dpas-protocol-version": String(step.protocolVersion),
     },
   });
 }
