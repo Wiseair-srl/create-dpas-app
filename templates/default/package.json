@@ -49,7 +49,7 @@
     "@agent-surface/testing": "^0.5.1",
     "@ai-sdk/provider": "^2.0.3",
     "@axe-core/playwright": "^4.12.1",
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@orpc-agent/testing": "^2.0.0",
     "@playwright/test": "^1.62.0",
     "@tailwindcss/postcss": "^4.3.3",
@@ -59,11 +59,11 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
-    "eslint": "^9.39.5",
+    "eslint": "^10.8.0",
     "eslint-config-next": "^16.2.12",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
   }
