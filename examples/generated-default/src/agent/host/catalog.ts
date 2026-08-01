@@ -24,6 +24,20 @@ export interface FrontendCatalogProjection {
   undecodable: string[];
 }
 
+/**
+ * Meta mode projects three fixed entry points, so their effect is a property
+ * of the TOOL and not of any capability the snapshot could describe — which
+ * would otherwise leave all three at `"unknown"`. Naming them keeps the two
+ * readers of `effect` honest under meta mode: the model, and the host's
+ * surface-settlement gate (`surface-settle.ts`), which waits after anything
+ * that is not a read.
+ */
+const META_TOOL_EFFECTS: Record<string, string> = {
+  surface_discover: "read",
+  surface_read: "read",
+  surface_act: "unknown",
+};
+
 export function buildFrontendToolDescriptors(
   toolset: AgentToolset,
   snapshot: AgentSurfaceSnapshot,
@@ -65,7 +79,7 @@ export function buildFrontendToolDescriptors(
       plane: canonicalId.startsWith("domain:") ? "domain" : "view",
       description: tool.description,
       inputSchema: tool.inputSchema as Record<string, unknown>,
-      effect: info?.effect ?? "unknown",
+      effect: (metaMode ? META_TOOL_EFFECTS[tool.name] : info?.effect) ?? "unknown",
       confirmation: info?.confirmation ?? "never",
     });
 

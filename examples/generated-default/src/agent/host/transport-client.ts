@@ -17,6 +17,8 @@ import {
   type WireModelMessage,
 } from "./protocol";
 import { scopeForRoute } from "./scope";
+import { NAVIGATION_SETTLE_BUDGET, waitForSurfaceSettled } from "./surface-settle";
+import { currentPathname } from "./toolset";
 import type { CatalogMode } from "./catalog-mode";
 
 /**
@@ -26,7 +28,13 @@ import type { CatalogMode } from "./catalog-mode";
  *   1. project the LIVE surface into frontend tool descriptors;
  *   2. POST a step; stream frames (text, server tool activity, inspector);
  *   3. if the step ended at frontend tool-calls, execute them through Agent
- *      Surface (confirmations wait here, between requests) and loop.
+ *      Surface (confirmations wait here, between requests), wait for the
+ *      surface to absorb them (`surface-settle.ts`), and loop.
+ *
+ * Step 3 waits because "project the LIVE surface" is a claim about timing, not
+ * just about where the data comes from: a call returns to this loop across
+ * microtasks, and the surface it changed moves on a React commit. Without the
+ * wait, step N+1 is handed the surface as it was before step N acted.
  *
  * Run limits live in host code, not prompts: max steps, a turn deadline, and
  * loop detection over both planes (see `loop-guard.ts`).
@@ -230,6 +238,10 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
     // Execute the frontend tool calls this step ended on. Confirmations for
     // destructive contextual procedures block HERE — no server stream is open.
     const toolMessages: WireModelMessage[] = [];
+    // What this step told the model each tool does. A read cannot move the
+    // surface; every other effect can, and that is what decides whether the
+    // next reader has to wait for it.
+    const effectOf = new Map(frontendTools.map((tool) => [tool.wireName, tool.effect]));
     let executed = 0;
     let cancelled = false;
     let verdict: ReturnType<typeof guard.record> = null;
@@ -246,6 +258,8 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
         executor: "browser",
         input: pending.input,
       });
+      const versionBeforeCall = registry.getVersion();
+      const routeBeforeCall = currentPathname();
       const outcome = await dispatchFrontendToolCall(
         toolset,
         { toolCallId: pending.toolCallId, wireName: pending.wireName, input: pending.input },
@@ -264,6 +278,40 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
       // produce this result, so history carries it either way.
       toolMessages.push(toolResultMessage(pending, outcome.value));
       executed += 1;
+
+      // Let the surface absorb the call before anything reads it again —
+      // the next call in this step (a model that emits `setFilters` and
+      // `readState` together gets the filtered rows, not the previous ones)
+      // and the next step's snapshot at the top of this loop.
+      if (effectOf.get(pending.wireName) !== "read") {
+        // Keyed on the route actually changing, not on the declared effect: a
+        // `goTo` to the route already open moves nothing and should not buy
+        // the long budget, and a route that changed needs it whatever the
+        // capability called itself.
+        const navigated = currentPathname() !== routeBeforeCall;
+        const settled = await waitForSurfaceSettled(registry, versionBeforeCall, {
+          signal,
+          ...(navigated ? { budget: NAVIGATION_SETTLE_BUDGET } : {}),
+        });
+        if (settled.reason === "settled" || settled.reason === "timeout") {
+          inspector.push({
+            lane: "host",
+            type: "surface-settled",
+            status: settled.reason === "timeout" ? "error" : "info",
+            summary:
+              settled.reason === "timeout"
+                ? `surface still changing after ${settled.waitedMs}ms — catalog may lag`
+                : `surface v${settled.fromVersion} → v${settled.toVersion} in ${settled.waitedMs}ms`,
+            durationMs: settled.waitedMs,
+            correlation: {
+              conversationId,
+              turnId,
+              toolCallId: pending.toolCallId,
+              capabilityId: pending.canonicalId,
+            },
+          });
+        }
+      }
 
       verdict = guard.record({
         canonicalId: pending.canonicalId,

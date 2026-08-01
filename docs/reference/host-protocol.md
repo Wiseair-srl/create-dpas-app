@@ -10,7 +10,7 @@ One POST is **one model step-run**. The server streams NDJSON frames back and ho
 
 1. The browser snapshots the live Agent Surface into wire descriptors (declaration only; executors stay in the tab) and posts them with the model-message history.
 2. The server resolves the session from the cookie, composes the catalog — governed domain tools for that actor **plus** the declared frontend tools — rejects duplicate paths, runs one Mastra step and streams frames.
-3. If the run ends at frontend tool calls, it **suspends**: the browser executes them through Agent Surface, appends the results and posts the next step.
+3. If the run ends at frontend tool calls, it **suspends**: the browser executes them through Agent Surface, waits for the surface to absorb them, appends the results and posts the next step.
 
 The third point is the reason the protocol exists in this shape: **confirmations wait between requests**, not inside a held-open stream ([ADR-0005](../adr/0005-confirmation-wait-between-steps.md)). A human decision never blocks a connection, and a dropped connection never strands a decision.
 
@@ -327,6 +327,18 @@ The server streams what happened, then returns two things it will immediately fo
     "selectedIds": [],
     "sorting": null } }
 ```
+
+### ⑥b Browser, internal: waiting for the surface to catch up
+
+Re-deriving the catalog every step is only half of "live". The other half is *when*: a tool call returns to the loop across **microtasks**, while the surface it changed moves on a **React commit** — registration happens in a passive effect, and availability is pushed from an effect that runs after it. Microtasks drain first, so a snapshot taken the instant a call resolves is the surface as it was *before* the call.
+
+So the loop waits. After any call whose `effect` is not `read`, `surface-settle.ts` blocks until the registry's version moves and then stays quiet for one short window — gated on the registry's own `surface-changed`, not on a fixed macrotask yield, which would only be a guess about React's scheduler. The wait sits between calls too, so a model that emits `filters.set` and `table.readState` in one step reads the filtered rows rather than the previous ones.
+
+Budgets are small and bounded (`60ms` to start moving, `40ms` of quiet, `750ms` ceiling). A read-only step skips the gate outright; a surface that never stops changing times out and says so in the Inspector rather than stalling the turn. The first-change budget doubles as the commit yield: a contextual binding's `describe()` text rides the latest-ref, written during render, so it needs a commit rather than a version bump — and there is no event for that.
+
+A **route change** gets its own budget (`2s` to start moving, `5s` ceiling), keyed on the route actually having changed rather than on the declared effect. A warm navigation has the destination mounted by the time the action resolves and spends none of it; a cold one, where the route's code split and its data still have to arrive, is the case where the surface has not moved *at all* and the old catalog looks settled because nothing has happened yet.
+
+This is also an authoring contract, not only a host one. A `navigation` action must resolve when the router **commits** the transition — `router.push` returns immediately, and resolving there reports success while the old page is still mounted (D23). `nav-rail.tsx` holds the promise until `usePathname` reports the new route, which is why the capability lives in the layout: a rail owned by the page it navigates away from cannot observe its own success.
 
 ### Steps 1–3: narrowing, and why the catalog changes underneath
 
