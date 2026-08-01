@@ -5,6 +5,7 @@ import { useAgentComponent } from "@agent-surface/react";
 import { Boxes, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 import { zs } from "@/agent/surface/schema";
 import { NavigateSchema, RouteStateSchema } from "@/features/devices/capabilities/schemas";
@@ -20,9 +21,69 @@ const LINKS = [
   { href: "/architecture" as const, label: "Architecture", icon: Boxes },
 ];
 
+interface PendingNavigation {
+  path: string;
+  resolve: () => void;
+  reject: (error: Error) => void;
+}
+
+/**
+ * Pushes a route and resolves when the router COMMITS the transition — the D23
+ * authoring contract (agent-surface `docs/03` §lifecycle) for a `navigation`
+ * action.
+ *
+ * `router.push` returns immediately. Resolving there reports success while the
+ * old page is still mounted, so the host loop's next catalog is the one from
+ * the route the agent just left: it navigates, and is then told the
+ * destination has no capabilities. Waiting for `usePathname` to report the new
+ * route makes the result mean what it says.
+ *
+ * At most one entry, and no queue of our own: actions are serialized per
+ * component instance (D13), so a second `goTo` cannot start until this one
+ * settles.
+ *
+ * This works because the rail lives in the app LAYOUT and survives the
+ * transition it starts. A navigation capability owned by the page it navigates
+ * away from cannot observe its own success — it is gone before the new route
+ * commits — which is the authoring reason to put it here.
+ */
+function useRouteCommit(pathname: string): (path: string, signal: AbortSignal) => Promise<void> {
+  const router = useRouter();
+  const pending = useRef<PendingNavigation | null>(null);
+
+  useEffect(() => {
+    const inFlight = pending.current;
+    if (!inFlight || inFlight.path !== pathname) return;
+    pending.current = null;
+    inFlight.resolve();
+  }, [pathname]);
+
+  return useCallback(
+    (path, signal) =>
+      new Promise<void>((resolve, reject) => {
+        pending.current = { path, resolve, reject };
+        // Timeout, cancellation, unmount. Rejecting while the signal is
+        // aborted settles the invocation CANCELLED rather than
+        // EXECUTION_FAILED (D23) — and the guard means a transition that has
+        // already committed is never retracted by a late abort.
+        signal.addEventListener(
+          "abort",
+          () => {
+            if (pending.current?.resolve !== resolve) return;
+            pending.current = null;
+            reject(new Error("The navigation was abandoned before the route committed."));
+          },
+          { once: true },
+        );
+        router.push(path);
+      }),
+    [router],
+  );
+}
+
 export function NavRail() {
   const pathname = usePathname();
-  const router = useRouter();
+  const commitRoute = useRouteCommit(pathname ?? "/");
 
   useAgentComponent({
     type: "app.navigation",
@@ -40,9 +101,9 @@ export function NavRail() {
         input: zs(NavigateSchema),
         effect: "navigation",
         idempotent: true,
-        execute: ({ path }) => {
-          router.push(path);
-        },
+        // Already there: idempotent, and no commit is coming to wait for.
+        execute: ({ path }, ctx) =>
+          path === pathname ? Promise.resolve() : commitRoute(path, ctx.signal),
       }),
     },
   });

@@ -57,6 +57,12 @@ capabilityId (canonical id) · confirmationId?`.
    ([wiring.tsx](../src/agent/surface/wiring.tsx)); the table re-renders from
    fresh server data. The demo then re-reads the table state and reports the
    VERIFIED outcome — never an assumed one.
+10. **`host / surface-settled`** — the loop waits for that re-render before
+    projecting the next catalog
+    ([surface-settle.ts](../src/agent/host/surface-settle.ts)). The row shows
+    the version it moved through and how long it took. Without it the next
+    step would be handed the surface as it stood *before* the call, because a
+    tool call returns across microtasks and React commits on a macrotask.
 
 ## Batched tool calls
 

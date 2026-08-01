@@ -85,8 +85,18 @@ server half speak a small versioned protocol over `POST /api/chat`:
    `tool-call`, `tool-result`, `inspector`, `step-finish`).
 3. A run that stops at frontend tool-calls suspends: the browser executes
    them through Agent Surface (confirmations wait HERE, between requests — no
-   stream is held open across a human decision), appends the results, and
-   posts the next step.
+   stream is held open across a human decision), waits for the surface to
+   absorb them, appends the results, and posts the next step.
+
+That wait is load-bearing. A tool call returns to the loop across microtasks;
+the surface it changed moves on a React commit, one macrotask later. Snapshot
+immediately and step N+1 gets the surface as it was BEFORE step N acted — an
+agent that navigates is told the page it just opened has no capabilities. So
+the loop blocks on the registry's own version moving and then going quiet
+([surface-settle.ts](../src/agent/host/surface-settle.ts)), rather than on a
+guess about React's scheduler. Reads skip the gate; nothing waits longer than
+750ms, except a route change, which gets 5s because a cold destination has to
+load its code and its data before it registers anything at all.
 
 One sharp edge the host absorbs: a model may call a server tool and a client
 tool in the *same* message. Mastra executes the server tool but suspends for

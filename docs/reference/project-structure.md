@@ -41,7 +41,8 @@ docs/                      the guides that also make up this site
 | `catalog.ts` | Browser-side projection of the live surface into wire descriptors |
 | `wire-names.ts` | Canonical id ↔ provider-safe wire name, both planes, one convention |
 | `client-dispatch.ts` | Routing a model tool call to the Agent Surface executor |
-| `transport-client.ts` | The browser half of the loop: snapshot → post → stream → execute → repeat, plus run limits |
+| `surface-settle.ts` | Waiting for React to commit what a call changed, before the next catalog is projected |
+| `transport-client.ts` | The browser half of the loop: snapshot → post → stream → execute → settle → repeat, plus run limits |
 | `server-compose.ts` | The server half: catalog composition, collision rejection, one Mastra run, frame emission |
 | `identity.ts` | Conversation, turn and step ids |
 | `errors.ts` | The single result envelope the model reads back |
