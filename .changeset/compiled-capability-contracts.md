@@ -2,11 +2,15 @@
 "create-dpas-app": minor
 ---
 
-Upgrade the template to `agent-surface@0.19`: the agent surface is now compiled from source instead of discovered at runtime.
+Upgrade the template to `agent-surface@0.20`: the agent surface is now compiled from source instead of discovered at runtime.
 
 `agent-surface@0.16` replaced runtime surface discovery with a build-time
-compiler, `0.17` made its authority mandatory at registration, and `0.18`
-introduced contract format v5. The generated app follows
+compiler, `0.17` made its authority mandatory at registration, `0.18`
+introduced contract format v5, and `0.19.1` carried the compiler into the dev
+server and the test runner — before it, only a production build had authority.
+`0.20` changes no semantics: `inspect` draws the capability inventory it
+previously printed only through a pipe, and `--detail` adds each capability's
+description and tags. The generated app follows
 ([ADR-0011](https://github.com/pbWise/create-dpas-app/blob/main/docs/adr/0011-compiled-capability-contracts.md)):
 
 - Every capability is declared statically in `app/agent/surface/contracts.ts`.
@@ -32,4 +36,4 @@ schema error the model can read off the schema instead of discovering by
 rejection. The cost is that descriptions no longer interpolate runtime values:
 `sort` names its sortable columns as literal text per contract.
 
-Requires `@agent-surface/*` ≥ 0.19.1.
+Requires `@agent-surface/*` ≥ 0.19.1; the template pins `^0.20.0`.
