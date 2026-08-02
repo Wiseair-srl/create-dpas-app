@@ -30,10 +30,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "node build/index.mjs",
+    // Builds before serving: `build/index.mjs` is the artifact under test, and
+    // a suite that runs whatever bundle happens to be on disk reports stale
+    // output as a broken fix. `reuseExistingServer: false` is the other half —
+    // together they mean every run measures the working tree.
+    command: "pnpm build && node build/index.mjs",
     url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: false,
-    timeout: 60_000,
+    timeout: 120_000,
     env: {
       PORT: String(PORT),
       MODEL_PROVIDER: "mock",
