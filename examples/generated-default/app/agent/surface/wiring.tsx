@@ -16,6 +16,15 @@ import { getSurfaceRegistry, setSurfaceRoute, setSurfaceSession, type SurfaceUse
  *    cache, exactly as a button's mutation does. The agent writes through the
  *    same data layer as every human path; it has no privileged channel into
  *    the UI.
+ *
+ *    HALF the story, and the half is the point: this subscription sees only
+ *    what the agent runs in the BROWSER. Most domain capabilities are composed
+ *    server-side and execute inside the model loop, where no surface event is
+ *    ever emitted — those reconcile from the stream instead, in
+ *    `agent/host/transport-client.ts` (`onDomainMutation`). One convention,
+ *    two triggers, because there are two execution planes. Reading either one
+ *    as complete is exactly the bug that made agent writes update the screen
+ *    sometimes.
  * 2. Route + session — kept in refs the registry reads lazily at snapshot and
  *    invoke time.
  *
@@ -98,6 +107,8 @@ function SurfaceWiring({ user }: { user: SurfaceUser | null }) {
         // Blanket invalidation is the app-wide convention — do not narrow it
         // here, or the agent and the buttons would refresh the page
         // differently, and the difference would be a bug nobody can see.
+        // The server plane runs the identical line from the stream consumer;
+        // narrowing one of the two would also make them disagree.
         if (ok && typeof capabilityId === "string" && capabilityId.startsWith("domain:")) {
           void queryClient.invalidateQueries();
         }

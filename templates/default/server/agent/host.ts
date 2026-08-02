@@ -2,6 +2,7 @@ import { jsonSchema, tool, type ModelMessage, type ToolSet } from "ai";
 import { toAISDKTools } from "@orpc-agent/ai-sdk";
 import { runtime as agentRuntime, actorFor } from "../runtime";
 import { contextFor } from "../../capabilities/base";
+import { registry } from "../../capabilities/registry";
 import { getAuditLog, type AuditEntry } from "./audit-tap";
 import type { SessionUser } from "../auth";
 import { buildCopilotAgent, RUN_LIMITS } from "../mastra";
@@ -93,6 +94,17 @@ export async function handleChatStep(request: Request, user: SessionUser): Promi
   const scope = resolveScope(step.pathname, step.requestedScope);
 
   const domainCanonicalByWire = new Map<string, string>();
+  /**
+   * Wire name → declared side effect, read from the registry rather than
+   * guessed from the name. Captured HERE for the same reason the canonical id
+   * is: this is the one moment where the wire name and the capability it was
+   * minted from are both known for certain.
+   *
+   * A capability the registry cannot resolve defaults to `"write"`, which is
+   * the direction the browser's reconciliation wants the doubt to fall in
+   * (protocol.ts `mutatesData`).
+   */
+  const domainSideEffectByWire = new Map<string, string>();
   const domainTools = await toAISDKTools(agentRuntime, {
     actor: actorFor(user),
     context,
@@ -102,6 +114,7 @@ export async function handleChatStep(request: Request, user: SessionUser): Promi
     toolNaming: (capabilityId) => {
       const wireName = domainToolName(capabilityId);
       domainCanonicalByWire.set(wireName, `domain:${capabilityId}`);
+      domainSideEffectByWire.set(wireName, registry.get(capabilityId)?.meta.sideEffect ?? "write");
       return wireName;
     },
   });
@@ -134,6 +147,7 @@ export async function handleChatStep(request: Request, user: SessionUser): Promi
         canonicalId,
         description: (t as { description?: string }).description ?? "",
         requiresApproval: false,
+        sideEffect: domainSideEffectByWire.get(wireName) ?? "write",
       },
     ];
   });

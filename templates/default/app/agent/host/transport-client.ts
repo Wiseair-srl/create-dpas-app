@@ -9,6 +9,7 @@ import {
   CATALOG_LIMITS,
   catalogTooLargeMessage,
   createFrameDecoder,
+  mutatesData,
   PROTOCOL_VERSION,
   type ChatStepFrame,
   type DomainToolInfo,
@@ -60,6 +61,22 @@ export interface TurnEvents {
     result: unknown;
   }) => void;
   onDomainCatalog: (tools: DomainToolInfo[]) => void;
+  /**
+   * A server-plane write just SUCCEEDED, so anything the tab is displaying may
+   * now be stale.
+   *
+   * This is the second trigger for the app's one reconciliation convention.
+   * The first is the surface subscription in `app/agent/surface/wiring.tsx`,
+   * which covers capabilities the agent runs in the BROWSER; those never reach
+   * this callback, and the calls that reach this callback never reach that
+   * subscription. Neither covers the other plane — that split is the whole
+   * reason both exist.
+   *
+   * Fires once per successful write, not once per turn: a turn that writes
+   * three times and keeps reasoning should update the screen as it goes, and
+   * the agent's own later reads of that screen should see the new state too.
+   */
+  onDomainMutation: () => void;
   /**
    * What one step-request cost. Called once per step, and not at all when the
    * provider reported nothing — so a silent provider leaves the counter
@@ -434,6 +451,15 @@ async function consumeStepStream(
   // `tool-result` frames carry no input, so the guard's identity key has to be
   // rebuilt from the matching `tool-call`.
   const serverInputs = new Map<string, unknown>();
+  /**
+   * Wire name → side effect, for THIS step only.
+   *
+   * Deliberately not hoisted to the turn: the catalog is composed per request
+   * from the actor and the route, so a map built for an earlier step describes
+   * a different set of tools — and after a `goTo` mid-turn, a materially
+   * different one.
+   */
+  const sideEffectByWire = new Map<string, string | undefined>();
 
   const frameDecoder = createFrameDecoder((frame) => {
     handleFrame(frame);
@@ -442,6 +468,9 @@ async function consumeStepStream(
   function handleFrame(frame: ChatStepFrame) {
     switch (frame.type) {
       case "step-start":
+        for (const tool of frame.domainTools) {
+          sideEffectByWire.set(tool.wireName, tool.sideEffect);
+        }
         events.onDomainCatalog(frame.domainTools);
         inspector.push({
           lane: "host",
@@ -484,6 +513,28 @@ async function consumeStepStream(
           ok: frame.ok,
           result: frame.result,
         });
+        // Membership in the map is the test for "this is a governed server
+        // tool": a name outside it is a frontend declaration or one the model
+        // invented, and neither wrote anything here. Successes only —
+        // refetching after a REFUSED write would dress a failure up as an
+        // update, which is worse than the stale screen it replaces.
+        //
+        // `has` and `get` are separate because the field is optional: an
+        // absent entry means "not a server tool", while an entry holding
+        // `undefined` means "server tool whose effect this server did not
+        // declare" — which `mutatesData` counts as a write.
+        if (frame.ok && sideEffectByWire.has(frame.wireName)) {
+          if (mutatesData(sideEffectByWire.get(frame.wireName))) {
+            inspector.push({
+              lane: "host",
+              type: "reconcile",
+              status: "info",
+              summary: `${frame.canonicalId} wrote · invalidating query cache`,
+              correlation: { ...correlation, toolCallId: frame.toolCallId },
+            });
+            events.onDomainMutation();
+          }
+        }
         break;
       case "inspector":
         inspector.push({

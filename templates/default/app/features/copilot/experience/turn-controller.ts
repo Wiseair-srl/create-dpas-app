@@ -1,6 +1,7 @@
 import { getSurfaceRegistry } from "@/agent/surface/registry";
 import { currentPathname, getHostToolset } from "@/agent/host/toolset";
 import { newTurnId } from "@/agent/host/identity";
+import { mutatesData } from "@/agent/host/protocol";
 import { runTurn } from "@/agent/host/transport-client";
 import { inspector, type CatalogRow } from "@/agent/inspector/inspector-store";
 import { useMessageStore } from "./message-store";
@@ -17,7 +18,18 @@ export function cancelActiveTurn() {
   activeAbort?.abort();
 }
 
-export async function startLiveTurn(text: string): Promise<void> {
+/**
+ * Refresh whatever the tab is displaying, because a server-plane write landed.
+ *
+ * Passed in rather than resolved here: this module is glue with no React
+ * context, and the query client lives in one. The caller supplies the SAME
+ * invalidation the buttons use (`runtime-adapter.tsx`) — if the agent's
+ * refresh were finer-grained than a human click's, the two paths would drift
+ * and the same operation would end up refreshing different screens.
+ */
+export type Reconcile = () => void;
+
+export async function startLiveTurn(text: string, reconcile: Reconcile): Promise<void> {
   const store = useMessageStore.getState();
   if (store.running !== "idle") return;
 
@@ -82,7 +94,11 @@ export async function startLiveTurn(text: string): Promise<void> {
                 plane: "domain",
                 kind: "direct-tool",
                 description: tool.description,
-                effect: "server-query",
+                // Translated from the capability's own `sideEffect` into the
+                // surface's effect vocabulary, so the two planes read the same
+                // way in one catalog. This used to be `"server-query"` for
+                // every row, which labelled every write a read.
+                effect: mutatesData(tool.sideEffect) ? "server-mutation" : "server-query",
                 executor: "server",
                 available: true,
                 confirmation: tool.requiresApproval ? "required" : "never",
@@ -90,6 +106,13 @@ export async function startLiveTurn(text: string): Promise<void> {
             ),
           );
         },
+        // The write happened on the server, inside the model loop; the tab was
+        // never told. See `TurnEvents.onDomainMutation` for why this is one of
+        // TWO triggers for a single convention, and why neither is redundant.
+        //
+        // Not awaited on purpose: invalidation is asynchronous and the turn has
+        // no reason to wait for a refetch before continuing.
+        onDomainMutation: reconcile,
         onUsage: (usage) => useMessageStore.getState().addUsage(usage),
         onAssistantMessageBoundary: () => useMessageStore.getState().sealAssistantText(),
         onError: (error) =>
