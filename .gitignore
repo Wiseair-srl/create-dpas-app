@@ -15,3 +15,5 @@ test-results/
 /templates/default/.data/
 /examples/generated-default/.data/
 /packages/create-dpas-app/template/
+.vercel
+
