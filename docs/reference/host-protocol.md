@@ -363,9 +363,20 @@ conversation.
 That `tool-result` for `toolu_01A` is the orphan settler at work: Mastra never
 emitted it, and the host wrote it from the result it captured while the tool ran.
 
-`domainTools` on `step-start` is **diagnostics only** — descriptions without
-schemas, so a consumer can show the domain half of the catalog. The model's tool
-definitions never travel back to the browser.
+`domainTools` on `step-start` carries descriptions without schemas, so a
+consumer can show the domain half of the catalog. The model's tool definitions
+never travel back to the browser.
+
+One field on it is load-bearing rather than diagnostic: `sideEffect`, copied
+from each capability's own `meta.sideEffect`. The domain plane executes inside
+the model loop on the server, so those writes never pass through the browser's
+data layer and nothing in the tab knows the database moved. The browser builds a
+wire-name → `sideEffect` map from this frame — per step, since the catalog is
+composed per request — and invalidates its query cache on every `tool-result`
+that is both `ok` and not a declared read. Anything that is not `"read"` or
+`"none"`, including a value the browser does not recognise and the field being
+absent altogether, counts as a write: one refetch too many costs a request, one
+missed leaves the user reading numbers that have already changed.
 
 The `inspector` frames are filtered by actor. The audit log is process-wide and
 concurrent users write to it simultaneously, so an entry is forwarded only when

@@ -217,6 +217,35 @@ export interface DomainToolInfo {
   wireName: string;
   description: string;
   requiresApproval: boolean;
+  /**
+   * What the capability does to the world, copied from its own
+   * `meta.sideEffect` — `"read"`, `"write"`, `"destructive"`, `"external"`,
+   * `"none"`.
+   *
+   * The domain plane executes inside the model loop on the server, so the tab
+   * never sees those writes land. This field is what lets the browser tell a
+   * write from a read and reconcile its cache for the former; without it the
+   * only honest option would be refetching after every `list-invoices` too.
+   *
+   * Typed as an open string rather than the `SideEffect` union: the browser
+   * must survive a value a newer server invented, and `mutatesData` below is
+   * written so that it does. OPTIONAL because a tab may outlive a deploy in
+   * the other direction — see that function for which way the doubt falls.
+   */
+  sideEffect?: string;
+}
+
+/**
+ * Does a settled call on this tool mean the database moved?
+ *
+ * Written by EXCLUSION deliberately. Anything that is not a declared read
+ * counts as a write: a value this build has never heard of, and `undefined`
+ * from a server too old to send the field, both land on "reconcile". The two
+ * errors are not symmetric — one refetch too many costs a request, one refetch
+ * missed leaves the user reading numbers that have already changed.
+ */
+export function mutatesData(sideEffect: string | undefined): boolean {
+  return sideEffect !== "read" && sideEffect !== "none";
 }
 
 /**
