@@ -61,19 +61,34 @@ supplies the whole plane's behaviour from the state a screen already has, given
 that screen's contract. It is worth reading in the expanded form once, because
 that hook is a loop over exactly these fields.
 
+**The split between the two halves is enforced, not stylistic.** Everything the
+model *reads* is frozen in the contract and provable at build time; a component
+may only supply behaviour. A binding that tries to set a description, a schema
+or an effect is a type error, and one the contract does not declare is refused
+by the registry ([ADR-0011](../adr/0011-compiled-capability-contracts.md)).
+
+Declared in the contract — what the model sees:
+
 | Field | Meaning |
 |---|---|
 | `type` + key | Together form the id: `view:invoices.pending.setFilters` |
-| `description` | What the model reads. Write it for a stranger, not for you. Frozen in the contract |
+| `description` | What the model reads. Write it for a stranger, not for you |
 | `input` / `output` | Literal JSON Schema through `fromJsonSchema(…)`; validated before `execute` ever runs |
 | `effect` | `local-state` or `navigation` — the only two. Anything server-side belongs to the domain plane |
-| `read` / `execute` | The runtime half, and the only half a component may supply |
 | `idempotent` | Safe to repeat with the same input |
+| `confirmation` | `never` · `optional` · `required` |
+
+Supplied by the binding — behaviour only:
+
+| Field | Meaning |
+|---|---|
+| `read` / `execute` | Your ordinary handler. The human path calls the same one |
 | `when` + `unavailableReason` | Present but unavailable, *with the reason the model should act on* |
 | `precondition(input)` | Reject semantically invalid input with details (e.g. ids not in the current result set) |
-| `confirmation` | `never` · `optional` · `required` |
-| `policies` | e.g. `hasPermission(...)` — hides the capability entirely from identities that lack it |
-| `execute` / `read` | Your ordinary handler. The human path calls the same one |
+
+Above both sits the registry's own baseline (`app/agent/surface/registry.ts`):
+the compiled contract as its `authority`, and `policies: [authenticated()]`, so
+a tab with no session has no surface at all rather than an empty one.
 
 **Lifetime is the mount.** Registering is the only way a capability exists; unmounting removes it. The browser snapshots the live surface at the start of every protocol step, so what the model sees is what is on the page right now — and a call against a stale registration fails with `STALE_CAPABILITY` or `COMPONENT_UNMOUNTED` rather than silently hitting the wrong component.
 

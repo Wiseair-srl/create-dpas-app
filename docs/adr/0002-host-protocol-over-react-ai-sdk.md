@@ -1,58 +1,64 @@
 # ADR-0002 — Application-owned host protocol instead of `@assistant-ui/react-ai-sdk`
 
-**Status:** accepted · 2026-07-30
+**Status:** accepted · 2026-07-30 · **amended 2026-08-02**
+
+> **Amendment.** The decision stands; the protocol has since moved to **v2**,
+> which adds `pathname`, a catalog envelope with mode and scope, and drops a
+> duplicate path instead of aborting the turn. The current contract is
+> [Host protocol](../reference/host-protocol.md); the v1 shape below is the
+> decision as taken.
 
 ## Context
 
-The agent-surface integration guide (docs/16, explicitly non-executable)
-sketches the live topology with `useChatRuntime` + `frontendTools` from
-`@assistant-ui/react-ai-sdk`. Two facts changed the calculus:
+The obvious way to wire a browser-side toolset into a chat UI is
+`useChatRuntime` + `frontendTools` from `@assistant-ui/react-ai-sdk`. Two facts
+ruled it out.
 
-1. **Version split-brain.** `@orpc-agent/ai-sdk@1.0.0` peers on `ai@^5`.
-   Current `@assistant-ui/react-ai-sdk@1.4.x` hard-depends on `ai@^7`
+1. **Version split-brain.** `@orpc-agent/ai-sdk` peers on `ai@^5`, while the
+   current `@assistant-ui/react-ai-sdk@1.4.x` hard-depends on `ai@^7`
    (1.0–1.1 → ai5, 1.2–1.3 → ai6, 1.4 → ai7). Using it means either pinning a
-   year-old assistant-ui adapter line into a brand-new scaffold or running two
-   `ai` majors with an unverified wire-protocol match between Mastra's v5
-   UI-message stream and an ai7 client.
-2. **DPAS §11.1** requires a versioned browser-server transport owned by the
-   Agent Host, with correlation, typed errors, confirmation transport, and
-   protocol versioning — and allows "an application-specific protocol" as long
-   as it stays an adapter concern. The build directive independently requires
-   `protocol.ts`, `correlation.ts`, typed transport errors in the host.
+   year-old adapter line into a brand-new scaffold, or running two `ai` majors
+   with an unverified wire-protocol match between the runtime's v5 UI-message
+   stream and an ai7 client.
+2. **The transport is load-bearing, and would not be ours.** A DPAS host needs a
+   *versioned* browser↔server transport with correlation ids, typed errors, and
+   somewhere for a human decision to happen that is not inside a held-open
+   stream. Handing that to a dependency means the layer that decides what the
+   model may see each turn is the one layer nobody in the application can read.
 
 ## Decision
 
-The Agent Host implements **DPAS host protocol v1**: a stateless step-loop.
+The Agent Host implements the **DPAS host protocol**: a stateless step-loop, as
+application code.
 
-- Browser → server: one POST per model step-run carrying
-  `{ protocolVersion, conversationId, turnId, modelMessages, frontendTools }`
-  where `frontendTools` are wire descriptors projected from the live Agent
-  Surface toolset (declaration only — execution stays in the browser).
-- Server → browser: NDJSON frames mapped 1:1 from Mastra `fullStream` chunks
-  (`text-delta`, `tool-call`, `tool-result`, `step-finish`, `finish`, `error`)
-  plus host frames (`catalog`, `inspector`) carrying correlation ids.
-- When a run finishes with `finishReason: "tool-calls"` on frontend tools, the
-  browser executes them through the Agent Surface toolset (confirmation waits
-  happen **here, between requests** — no server stream held open), appends
-  tool results to the model messages, and POSTs the next step.
+- Browser → server: one POST per model step-run carrying the protocol version,
+  conversation and turn ids, the model messages, and wire descriptors projected
+  from the live Agent Surface toolset — declaration only, execution stays in the
+  browser.
+- Server → browser: NDJSON frames mapped from the runtime's stream chunks, plus
+  host frames carrying correlation ids.
+- When a run ends at frontend tool calls, the browser executes them through
+  Agent Surface, appends the results to the model messages, and POSTs the next
+  step. **Confirmation waits happen here, between requests** — no server stream
+  is held open across a human decision.
 
-The chat UI uses `@assistant-ui/react` (latest, 0.15.x) through
-`useExternalStoreRuntime` for **both** live and guided modes; tool renderers
-and the thread UI are shared. Verified by spike: Mastra `clientTools` end the
-run at the client tool-call, and continuation from ModelMessages with tool
-results works.
+The chat UI uses `@assistant-ui/react` through `useExternalStoreRuntime`, so the
+experience layer consumes a plain message store rather than owning the loop.
 
 ## Consequences
 
-- One `ai` major (v5) in the entire app; `@orpc-agent/ai-sdk` and Mastra agree.
-- The transport is explicit, versioned, testable, and serverless-safe
-  (no in-memory run state).
-- Confirmation `"wait"` becomes safe (ADR-0005).
+- One `ai` major in the entire app; `@orpc-agent/ai-sdk` and the runtime agree.
+- The transport is explicit, versioned, unit-testable, and serverless-safe —
+  the server holds no run state, because the messages *are* the state.
+- Confirmation `wait` becomes safe ([ADR-0005](0005-confirmation-wait-between-steps.md)).
 - We forgo `useChatRuntime` conveniences (auto-continue, resume); the host
-  implements the step loop (~200 lines, unit-tested).
-- Replaceability improves: the experience layer consumes a plain message store,
-  so swapping assistant-ui means rewriting only the thread components and the
-  external-store adapter, not the capability providers or the protocol.
-- If a future `@assistant-ui/react-ai-sdk` line re-aligns with the `ai` major
-  required by orpc-agent, a `useChatRuntime`-based transport can be offered as
-  an alternative adapter without touching either capability provider.
+  implements the step loop itself.
+- Replaceability improves in both directions: swapping assistant-ui means
+  rewriting the thread components and the external-store adapter, not the
+  capability providers or the protocol. And if a future
+  `@assistant-ui/react-ai-sdk` line re-aligns with the `ai` major orpc-agent
+  requires, a `useChatRuntime` transport can be offered as an alternative
+  adapter without touching either capability provider.
+- The ceiling of this protocol is now the application's problem rather than a
+  dependency's — the catalog limits, the scoping rules and the cache-stability
+  design in [Host protocol](../reference/host-protocol.md) all follow from that.

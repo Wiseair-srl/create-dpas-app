@@ -4,7 +4,7 @@ layout: home
 hero:
   name: create-dpas-app
   text: Agentic apps that operate the product, not the DOM
-  tagline: Scaffold a Dual-Plane Agent Stack application — semantic capabilities on both sides of the network, an agent host you own, server-side approvals for what matters, and a test suite that never needs a model.
+  tagline: One command scaffolds a Dual-Plane Agent Stack application — semantic capabilities on both sides of the network, an agent host you own, server-side approvals for what matters, and a test suite that never needs a model.
   image:
     src: /logo.svg
     alt: create-dpas-app
@@ -26,7 +26,7 @@ features:
     link: /getting-started
   - icon: 🪟
     title: Two planes, never blurred
-    details: View capabilities are registered by the components that own the state and execute in the browser. Domain capabilities are oRPC procedures, governed and re-authorized on the server.
+    details: View capabilities are registered by the components that own the state and execute in the browser. Domain capabilities are oRPC procedures, governed and re-authorized on the server. The model sees one catalog and cannot tell them apart.
     link: /concepts/dual-plane
   - icon: 🎯
     title: Bind for context, gate for consequence
@@ -42,13 +42,9 @@ features:
     link: /concepts/capabilities
   - icon: 🧪
     title: Deterministic tests, no LLM
-    details: Governance and capability contracts are unit-tested; Playwright drives a production build through the live pipeline under a scripted model; a committed surface baseline is diffed like an API. CI never needs credentials.
+    details: Governance and capability contracts are unit-tested; Playwright drives a production build through the live pipeline under a scripted model; both planes compile to committed inventories you diff like an API. CI never needs credentials.
     link: /guides/testing
 ---
-
-> **Status:** the CLI is `create-dpas-app` on npm; the generated app is built on the published `@agent-surface/*` and `@orpc-agent/*` packages, Mastra, and assistant-ui. Everything on this site describes the app the scaffolder actually generates — the same markdown ships inside it.
-
-**Start here:** [Getting started](getting-started.md) · **The idea in one page:** [The dual-plane model](concepts/dual-plane.md) · **The centerpiece decision:** [Approvals over confirmations](adr/0010-approvals-over-confirmations.md) · **How the layers fit:** [Architecture](concepts/architecture.md)
 
 ```bash
 pnpm create dpas-app my-agent-app
@@ -65,41 +61,11 @@ The copilot reads the ageing ladder on the server, narrows the table in your bro
 
 Then ask it to issue a draft. It will not: a model-initiated `issue-invoice` comes back as an approval card, and nothing moves until you decide.
 
-## Documentation map
-
-### Introduction
-
-| Page | Answers |
-|---|---|
-| [Getting started](getting-started.md) | Scaffold, run, and find the load-bearing files |
-| [The dual-plane model](concepts/dual-plane.md) | Why two planes, what each may decide, the invariants |
-| [Anatomy of a capability](concepts/capabilities.md) | Ids, wire names, exposure, availability, binding, lifecycle |
-| [Architecture](concepts/architecture.md) | Why each layer of the generated app exists |
-
-### Guides
-
-| Page | Answers |
-|---|---|
-| [Adding a capability](guides/adding-a-capability.md) | Domain, view, and contextual — and how to choose |
-| [Connecting a model](guides/connecting-a-model.md) | Keys, allowlists, run limits, and what the model receives |
-| [Testing without an LLM](guides/testing.md) | Governance tests, surface contracts, e2e, the baseline gate |
-| [Deploying](guides/deploying.md) | The four seams to replace before anyone else uses it |
-
-### Reference
-
-[CLI](reference/cli.md) · [Project structure](reference/project-structure.md) · [Configuration](reference/configuration.md) · [Host protocol](reference/host-protocol.md) · [Error codes](reference/errors.md)
-
-### Security
-
-[Security model](security/model.md) · [Scaffolder guarantees](security/scaffolder.md)
-
-### Project
-
-[Repository and gates](project/repository.md) · [Decision records](project/decisions.md) · [Contributing](project/contributing.md)
-
 ## Reading paths
 
 - **“Show me what this is.”** — [Getting started](getting-started.md) → [The dual-plane model](concepts/dual-plane.md) → [Architecture](concepts/architecture.md)
 - **“I'm adding my own capabilities.”** — [Anatomy of a capability](concepts/capabilities.md) → [Adding a capability](guides/adding-a-capability.md) → [Testing](guides/testing.md)
 - **“I'm reviewing its security.”** — [Security model](security/model.md) → [Scaffolder guarantees](security/scaffolder.md) → [Host protocol](reference/host-protocol.md) → [Decision records](project/decisions.md)
 - **“I'm putting it in front of real users.”** — [Connecting a model](guides/connecting-a-model.md) → [Configuration](reference/configuration.md) → [Deploying](guides/deploying.md)
+
+Everything on this site describes the app the scaffolder actually generates, built on the published [`@agent-surface/*`](https://www.npmjs.com/package/@agent-surface/core) and [`@orpc-agent/*`](https://www.npmjs.com/package/@orpc-agent/core) packages, [Mastra](https://mastra.ai) and [assistant-ui](https://www.assistant-ui.com). The architecture, capability and security guides are the same markdown that ships inside every generated app, so the two cannot drift.

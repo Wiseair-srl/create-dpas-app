@@ -14,8 +14,12 @@ import type MarkdownIt from "markdown-it";
 const REPO_URL = (process.env.DOCS_REPO_URL ?? "").replace(/\/+$/, "");
 const REPO_BRANCH = process.env.DOCS_REPO_BRANCH ?? "main";
 
-/** `../src/x` in an app-shipped doc → `src/x` in the reader's generated app. */
-const APP_SOURCE = /^(?:\.\.\/)+(src\/.+)$/;
+/**
+ * `../app/x` in an app-shipped doc → `app/x` in the reader's generated app.
+ * The alternation is the template's own top-level source directories; a link to
+ * anything else is left alone rather than guessed at.
+ */
+const APP_SOURCE = /^(?:\.\.\/)+((?:app|server|capabilities|e2e|scripts)\/.+)$/;
 
 /** Root markdown served by wrapper pages under /project. */
 const ROOT_FILE_PAGES: [RegExp, string][] = [
@@ -88,9 +92,6 @@ export default defineConfig({
   lang: "en-US",
   cleanUrls: true,
   lastUpdated: true,
-
-  // Internal build artifacts that live in docs/ but are not site pages.
-  srcExclude: ["implementation-plan.md", "final-report.md"],
 
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
@@ -175,7 +176,7 @@ export default defineConfig({
         text: "Security",
         collapsed: false,
         items: [
-          { text: "Security and confirmation", link: "/security/model" },
+          { text: "Security model", link: "/security/model" },
           { text: "Scaffolder guarantees", link: "/security/scaffolder" },
         ],
       },
