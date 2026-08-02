@@ -16,7 +16,7 @@ bun  create dpas-app [project-name] [options]
 | `[project-name]` | package name | `my-dpas-app` | Also the directory name. Scoped names (`@scope/name`) create `name/` |
 | `-y, --yes` | — | off | Accept every default; no prompts. For CI and scripts |
 | `--package-manager` | `pnpm` · `npm` · `yarn` · `bun` | detected from `npm_config_user_agent`, else `pnpm` | Used for install and for the printed next steps |
-| `--model-provider` | `demo` · `anthropic` · `openai` | `demo` | Writes `MODEL_PROVIDER` into `.env`. **Never writes a key** |
+| `--model-provider` | `none` · `anthropic` · `openrouter` | `none` | Uncomments that provider's key line in `.env`, empty. **Never writes a key** |
 | `--install` / `--no-install` | — | install | `--no-install` prints the install command instead |
 | `--git` / `--no-git` | — | init | `--git` initializes a repo on `main` and makes one unsigned initial commit |
 | `--example <name>` | `default` | `default` | Template to generate |
@@ -38,7 +38,7 @@ Lowercase; at most 214 characters; no leading dot or underscore; letters, digits
 1. **Copies the template** — excluding `node_modules`, `.next`, `.data`, `coverage`, `test-results`, `playwright-report`, `.env`, `next-env.d.ts` and build info.
 2. **Restores `.gitignore`** — npm strips it from published packages, so the template ships it as `gitignore` and the CLI renames it back.
 3. **Replaces the project name** in `package.json` and `README.md`. That is the whole templating: no placeholder language, no code generation.
-4. **Writes `.env` from `.env.example`**, with `MODEL_PROVIDER` set to your choice and **every API key left commented**.
+4. **Writes `.env` from `.env.example`**, with the chosen provider's key line uncommented and empty, and **every other key left commented**. The app decides which provider to use from which key is set, so there is no separate switch to keep in agreement.
 
 Everything is materialized in a temp directory and moved into place only when complete, so a failed run never leaves a half-generated project. The CLI refuses a destination that exists and is non-empty (`.git` and `.DS_Store` excepted) rather than overwriting anything.
 

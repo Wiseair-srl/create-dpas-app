@@ -119,19 +119,27 @@ async function main() {
   }
 
   // --- model mode -----------------------------------------------------------
-  let modelProvider: ModelProvider = options.modelProvider ?? "demo";
+  let modelProvider: ModelProvider = options.modelProvider ?? "none";
   if (options.modelProvider === undefined && !options.yes) {
     const answer = await p.select({
-      message: "Model mode",
-      initialValue: "demo" as ModelProvider,
+      message: "Copilot model",
+      initialValue: "none" as ModelProvider,
       options: [
         {
-          value: "demo" as ModelProvider,
-          label: "Guided demo only",
-          hint: "no API key needed — configure a model later in .env",
+          value: "none" as ModelProvider,
+          label: "Decide later",
+          hint: "the app runs fully; only the copilot needs a key",
         },
-        { value: "anthropic" as ModelProvider, label: "Anthropic (Claude)", hint: "needs ANTHROPIC_API_KEY" },
-        { value: "openai" as ModelProvider, label: "OpenAI (GPT)", hint: "needs OPENAI_API_KEY" },
+        {
+          value: "anthropic" as ModelProvider,
+          label: "Anthropic (Claude)",
+          hint: "uncomments ANTHROPIC_API_KEY in .env",
+        },
+        {
+          value: "openrouter" as ModelProvider,
+          label: "OpenRouter",
+          hint: "uncomments OPENROUTER_API_KEY in .env",
+        },
       ],
     });
     if (p.isCancel(answer)) cancelled();
@@ -208,11 +216,12 @@ async function main() {
   ];
   p.note(lines.join("\n"), "Next steps");
   p.log.message(
-    modelProvider === "demo"
-      ? "Then open http://localhost:3000 and press “Run guided demo” — the full\n" +
-          "agent pipeline runs deterministically, no model or API key involved."
-      : `Then add your ${modelProvider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"} to .env and open http://localhost:3000.\n` +
-          "“Run guided demo” always works — even before the key is set.",
+    modelProvider === "none"
+      ? "Open http://localhost:3000: the ledger, the screens, the approval flow\n" +
+          "and the MCP endpoint all work with no key at all. Add one to .env when\n" +
+          "you want the copilot to think."
+      : `Paste your ${modelProvider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENROUTER_API_KEY"} into .env, then open http://localhost:3000.\n` +
+          "Everything but the copilot works before you do.",
   );
   p.outro("The architecture tour lives at /architecture and in docs/.");
 }

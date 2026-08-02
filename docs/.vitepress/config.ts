@@ -154,10 +154,7 @@ export default defineConfig({
         text: "Guides",
         collapsed: false,
         items: [
-          { text: "Adding a view capability", link: "/guides/adding-a-view-capability" },
-          { text: "Adding a domain capability", link: "/guides/adding-a-domain-capability" },
-          { text: "Contextual domain actions", link: "/guides/contextual-domain-actions" },
-          { text: "Tracing a tool call", link: "/guides/tracing-a-tool-call" },
+          { text: "Adding a capability", link: "/guides/adding-a-capability" },
           { text: "Connecting a model", link: "/guides/connecting-a-model" },
           { text: "Testing without an LLM", link: "/guides/testing" },
           { text: "Deploying", link: "/guides/deploying" },
@@ -223,6 +220,14 @@ export default defineConfig({
           {
             text: "ADR-0009 · Orphaned server tool calls",
             link: "/adr/0009-orphaned-server-tool-calls",
+          },
+          {
+            text: "ADR-0010 · Approvals over confirmations",
+            link: "/adr/0010-approvals-over-confirmations",
+          },
+          {
+            text: "ADR-0011 · Compiled capability contracts",
+            link: "/adr/0011-compiled-capability-contracts",
           },
         ],
       },

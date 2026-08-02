@@ -125,21 +125,33 @@ describe("generation", () => {
 
     // Env: provider selected, secrets never written.
     const env = readFileSync(path.join(target, ".env"), "utf8");
-    expect(env).toContain("MODEL_PROVIDER=anthropic");
-    expect(env).toMatch(/#\s*ANTHROPIC_API_KEY=/);
+    // Choosing a provider UNCOMMENTS its key line — the app decides from which
+    // key is set, so there is no separate switch to keep in agreement with it.
+    expect(env).toMatch(/^ANTHROPIC_API_KEY=$/m);
+    // Uncommented but EMPTY, and the provider not chosen stays commented: a
+    // generated .env is a form to fill in, never a place a secret appears.
+    expect(env).not.toMatch(/^ANTHROPIC_API_KEY=.+$/m);
+    expect(env).toMatch(/^#\s*OPENROUTER_API_KEY=/m);
     expect(existsSync(path.join(target, ".env.example"))).toBe(true);
 
     // Structure: sources present, build artifacts and installs excluded.
+    // One file per layer the architecture claims to have — a generated app
+    // missing any of these is missing a plane, not a file.
     for (const expected of [
       ".gitignore",
-      "src/agent/host/protocol.ts",
-      "src/server/orpc/procedures.ts",
-      "src/app/(app)/dashboard/page.tsx",
-      "e2e/guided-demo.spec.ts",
+      "capabilities/registry.ts",          // the domain plane
+      "app/agent/host/protocol.ts",        // the host's wire contract
+      "app/agent/surface/registry.ts",     // the presentation plane
+      "app/agent/domain/manifest.ts",      // the exposure ceiling
+      "server/index.ts",                   // the one process
+      "server/mcp.ts",                     // the second adapter
+      "app/agent/surface/contracts.ts",    // the declared exposure ceiling
+      ".agent-surface/contract.json",      // …and the compiled artifact
+      "e2e/copilot.spec.ts",
     ]) {
       expect(existsSync(path.join(target, expected)), expected).toBe(true);
     }
-    for (const excluded of ["node_modules", ".next", ".data", ".env.local"]) {
+    for (const excluded of ["node_modules", "dist", "build", ".data", ".env.local"]) {
       expect(existsSync(path.join(target, excluded)), excluded).toBe(false);
     }
   });
@@ -155,7 +167,7 @@ describe("generation", () => {
         projectName: "busy",
         targetDir: target,
         templateDir,
-        modelProvider: "demo",
+        modelProvider: "none",
         packageManager: "pnpm",
       }),
     ).toThrow(ScaffoldError);
@@ -170,9 +182,13 @@ describe("generation", () => {
       projectName: "demo-app",
       targetDir: target,
       templateDir,
-      modelProvider: "demo",
+      modelProvider: "none",
       packageManager: "npm",
     });
-    expect(readFileSync(path.join(target, ".env"), "utf8")).toContain("MODEL_PROVIDER=demo");
+    // "Decide later" leaves every key commented — a generated .env must never
+    // arrive with a live key line the developer did not ask for.
+    const env = readFileSync(path.join(target, ".env"), "utf8");
+    expect(env).toMatch(/^#\s*ANTHROPIC_API_KEY=/m);
+    expect(env).not.toMatch(/^ANTHROPIC_API_KEY=/m);
   });
 });

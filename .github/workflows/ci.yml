@@ -31,6 +31,10 @@ jobs:
       - run: pnpm build
       - name: Example drift gate
         run: pnpm check:example
+      - name: View plane gate
+        run: pnpm view:check
+      - name: Domain plane gate
+        run: pnpm domain:check
       - name: Docs site (fails on dead links)
         if: matrix.node == 22
         run: pnpm docs:build

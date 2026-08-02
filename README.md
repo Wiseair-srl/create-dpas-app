@@ -12,41 +12,51 @@ pnpm create dpas-app my-agent-app
 cd my-agent-app && pnpm dev
 ```
 
-Open http://localhost:3000 and press **Run guided demo**. With zero
-configuration — no API key, no database — a deterministic runner executes the
-golden scenario through the full production pipeline:
+Open http://localhost:3000. You get a working **receivables console** — a
+ledger, three screens, a docked copilot (⌘J), an MCP endpoint and a governed
+approval flow — with no database, no API key and no configuration.
 
-> *“Show me the offline devices in Milan, select the visible devices, and
-> disable them.”*
+## The idea
 
-Filters apply, rows select, `domain:devices.disable` becomes available only
-because rows are selected, a confirmation card shows the exact devices about
-to be disabled, and on approval the server executes, the table reconciles,
-and the Agent Inspector shows the correlated trace. Deny it, and nothing
-happens — honestly reported.
+Two planes of capabilities, never blurred:
+
+| | `view:*` — presentation | `domain:*` — authoritative |
+|---|---|---|
+| Meaning | what the open screen can do | operations valid with no UI at all |
+| Owner | [Agent Surface](https://www.npmjs.com/package/@agent-surface/core), registered by components | [oRPC Agent](https://www.npmjs.com/package/@orpc-agent/core) over real oRPC procedures |
+| Executes | in this browser tab | on the server, re-authorized every call |
+
+And the rule that decides how a consequential operation is exposed:
+
+> **Bind for context. Gate for consequence.**
+
+A mutation whose *correctness* depends on what the user is looking at becomes a
+contextual reference: the model reaches it only through the live screen, with
+its target bound and *removed from the advertised schema*. A mutation whose
+*risk* is what it does stays a direct governed tool, and a model-initiated call
+suspends into a server-side approval a human decides.
+
+Reaching for the first to make the second safer is the mistake the template is
+built to make obvious — a contextual binding arrives at the server as a direct
+call, which the gate lets through by design.
 
 ## What you get
 
-A compact, credible **device operations dashboard** demonstrating all four
-DPAS layers plus a replaceable experience shell:
+| Layer | Implementation |
+|---|---|
+| Presentation capabilities | [`@agent-surface/*`](https://www.npmjs.com/package/@agent-surface/core) — one hook registers a table's whole plane |
+| Domain capabilities | [`@orpc-agent/*`](https://www.npmjs.com/package/@orpc-agent/core) over [oRPC](https://orpc.unnoq.com) — deny-by-default exposure, policy, approvals, audit |
+| Agent Host | **application-owned code** — versioned protocol, per-request composition, dispatch, correlation |
+| Runtime | [Mastra](https://mastra.ai) — the loop, and nothing else |
+| Experience | [assistant-ui](https://www.assistant-ui.com) — docked, resizable, thread history |
+| Second adapter | an **MCP** endpoint over the same registry, proving it is transport-agnostic |
 
-| Layer | Implementation | Owns |
-|---|---|---|
-| Presentation Capability Provider | [`@agent-surface/*`](https://www.npmjs.com/package/@agent-surface/core) | `view:*` capabilities, lifecycle, binding, confirmation |
-| Domain Capability Provider | [`@orpc-agent/*`](https://www.npmjs.com/package/@orpc-agent/core) over [oRPC](https://orpc.unnoq.com) | `domain:*` procedures, policy, audit — server-authoritative |
-| Agent Host | **application-owned code** in `src/agent/host/` | versioned protocol, per-turn composition, dispatch, correlation |
-| Agent Runtime | [Mastra](https://mastra.ai) | planning, the agent loop, run limits |
-| Experience layer | [assistant-ui](https://www.assistant-ui.com) | chat, streaming, tool & confirmation UX (replaceable) |
+Plus: a demo identity switcher that shows authority *hiding* rather than
+refusing, a committed surface baseline you diff like an API, and a test suite
+that never needs a model — e2e runs the entire live pipeline under a scripted
+`LanguageModelV2`.
 
-Plus: viewer/operator demo identity ("authority hides; state discloses"), a
-developer Agent Inspector (live catalog · correlated timeline · architecture
-map), light/dark themes, and a test suite that never needs a model — e2e runs
-the real Mastra pipeline under a scripted `LanguageModelV2`.
-
-Connect a live model whenever you like — paste an OpenRouter key straight
-into the assistant panel (held in server memory, never returned to the
-browser, never written to disk), or set `MODEL_PROVIDER` plus the matching
-API key in `.env` for a deployment.
+Stack: Vite + React Router on a Hono server, one process in production.
 
 ## CLI
 
@@ -55,7 +65,6 @@ pnpm create dpas-app [name] [options]
 
   -y, --yes                 accept all defaults, no prompts
       --package-manager     pnpm | npm | yarn | bun
-      --model-provider      demo | anthropic | openai
       --install / --no-install
       --git / --no-git
       --example <name>      template (available: default)

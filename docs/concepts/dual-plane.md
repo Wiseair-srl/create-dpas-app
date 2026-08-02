@@ -13,7 +13,7 @@ An assistant that can act inside a product needs two very different kinds of abi
 | | `view:*` — presentation plane | `domain:*` — authoritative plane |
 |---|---|---|
 | **Means** | what the currently open page can observe or do | operations that are valid with no UI at all |
-| **Examples** | `view:devices.filters.set`, `view:devices.table.selectRows` | `domain:devices.list`, `domain:devices.disable` |
+| **Examples** | `view:invoices.pending.setFilters`, `view:invoices.pending.selectRows` | `domain:list-invoices`, `domain:issue-invoice` |
 | **Owner** | [Agent Surface](https://www.npmjs.com/package/@agent-surface/core), registered by the component that owns the state | [oRPC Agent](https://www.npmjs.com/package/@orpc-agent/core) over real oRPC procedures |
 | **Lifetime** | one component mount — unmount and the capability is gone | the deployment |
 | **Executes** | in this browser tab | on the server, re-authorized on every call |
@@ -42,7 +42,7 @@ Agent Surface        oRPC Agent
 |---|---|---|
 | Presentation capability provider | `@agent-surface/*` | `view:*` capabilities, lifecycle, binding, confirmation |
 | Domain capability provider | `@orpc-agent/*` over [oRPC](https://orpc.unnoq.com) | `domain:*` procedures, exposure, policy, audit |
-| Agent Host | **your application code**, `src/agent/host/` | protocol, per-turn composition, dispatch, correlation, run limits |
+| Agent Host | **your application code**, `app/agent/host/` + `server/agent/host.ts` | protocol, per-request composition, dispatch, correlation, run limits |
 | Agent Runtime | [Mastra](https://mastra.ai) | planning, the agent loop |
 | Experience | [assistant-ui](https://www.assistant-ui.com) | chat, streaming, tool and confirmation UX |
 
@@ -64,10 +64,10 @@ These hold whatever the model does, because they are runtime code rather than pr
 
 - **A hijacked model has a small blast radius.** It cannot invent a tool, re-aim a bound call, skip a confirmation, or reach a capability the current identity lacks. The worst case at the domain boundary is a 403 in the audit log.
 - **The agent path and the human path are one implementation.** The toolbar button and the assistant call the same oRPC procedure; the assistant's filter change and the user's filter change go through the same state.
-- **You can test the governance without a model.** Availability, binding, locked fields, confirmation approve/deny/expiry/mismatch, viewer/operator authority — all deterministic. See [Testing without an LLM](../guides/testing.md).
+- **You can test the governance without a model.** Availability, binding, locked fields, confirmation approve/deny/expiry/mismatch, analyst/controller authority — all deterministic. See [Testing without an LLM](../guides/testing.md).
 
 ## Next
 
 - [Anatomy of a capability](capabilities.md) — the fields, ids and lifecycle you actually write
 - [Architecture](architecture.md) — why each layer exists, and the transport between them
-- [Contextual domain actions](../guides/contextual-domain-actions.md) — the pattern invariants 2–5 exist for
+- [Contextual domain actions](../guides/adding-a-capability.md) — the pattern invariants 2–5 exist for

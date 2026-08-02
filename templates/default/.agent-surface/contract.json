@@ -1,0 +1,1384 @@
+{
+  "capabilities": [
+    {
+      "capabilityId": "view:invoices.all.clearFilters",
+      "contractHash": "fcc2f386d519085c33c200f9576f79ffdf8225f098ae2ddd1ccc95770feb7e9b",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "Remove every filter on this table, restoring the unnarrowed view.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.moveColumn",
+      "contractHash": "0c7f5b214698d2e722e797054edd74a33c19ded3c24d9f84306cfab15f1fbdc0",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "Move one movable column a single position left or right.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "left",
+              "right"
+            ]
+          },
+          "id": {
+            "description": "Column id, as reported by readColumns",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "direction"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.readColumnFilters",
+      "contractHash": "bfd43a2d47c7249ef343856ad7b4d6ab8eef4fc64e93c6d644ecf7d8e150d0bb",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "The per-column filters of this table: which columns can narrow it, in what value format, what each is set to now, and — for a column with a fixed value list — the values that actually occur.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "description": "Value formats — text: a substring, matched case-insensitively (\"acme\"); select: exactly one of the values listed here (\"paid\"); number-range: \"min,max\", leave a side empty for open-ended (\"1000,\" is >=1000); date-range: \"from,to\" as ISO yyyy-mm-dd, either side may be empty (\"2024-01-01,\"). Any kind: the empty string clears that column's filter.",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "options": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "label"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.readColumns",
+      "contractHash": "fdbc3ab583bd239885c08f2ef611add800c73fe4e7c86f0d51205c82a4620bb0",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "The movable columns of this table in display order, each with whether it is currently hidden and whether it may be hidden at all.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "hidden": {
+              "type": "boolean"
+            },
+            "hideable": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "hidden",
+            "hideable"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.readFilters",
+      "contractHash": "688bd513624cd1246b3ad7fae4dc813e9efd0557756a2d59ef9a3ee591a19818",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "The filters currently narrowing this table, as a key/value map. An absent or empty key is not narrowing anything.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "description": "free text over invoice reference and client name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.readState",
+      "contractHash": "6258e31166371c87cce14491edf14448ce6865b9bd730e602af190ffc879e726",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "The rows currently visible in this table, in view order (at most 100), with the row counts and the active sort. Read this before acting on rows.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "rowCount": {
+            "type": "number"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "direction"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalRows": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "visibleRows": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {},
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "visibleRows",
+          "rowCount",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.setColumnFilters",
+      "contractHash": "8669dffed6951c69b56bd8ec9d9ebfca0fd9cf81c112fe1c7f8255e40226e7b5",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "Narrow this table by its columns. Pass only the column ids you want to change; omitted columns keep their value, and an empty string clears one. Read readColumnFilters first — a select column only accepts a value from its list.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "number-range — \"min,max\"; leave a side empty for open-ended (\"1000,\" is >=1000), or \"\" to clear",
+            "type": "string"
+          },
+          "client_name": {
+            "description": "select — exactly one of the values listed by readColumnFilters, or \"\" to clear",
+            "type": "string"
+          },
+          "issue_date": {
+            "description": "date-range — \"from,to\" as ISO yyyy-mm-dd, either side may be empty (\"2024-01-01,\"), or \"\" to clear",
+            "type": "string"
+          },
+          "segment": {
+            "description": "select — exactly one of the values listed by readColumnFilters, or \"\" to clear",
+            "type": "string"
+          },
+          "status": {
+            "description": "select — exactly one of the values listed by readColumnFilters, or \"\" to clear",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.setColumnVisibility",
+      "contractHash": "12ff930fd2ab2295b00fe68f180e7e1434018946b72db80305d40607ee42b0d7",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "Show or hide one movable column. Hiding a column changes what the user sees and what an export contains; it never changes which rows match.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "hidden": {
+            "description": "true hides the column, false shows it",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Column id, as reported by readColumns",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "hidden"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.setFilters",
+      "contractHash": "32d8ac776d75e4614057aefe914da4434d36a06ed14b45593a2aa92d35e2f8a6",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "Narrow this table. Pass only the keys you want to change; omitted keys keep their current value, and an empty string clears one. The valid keys are documented on the input schema. Filters are URL-synced, so the user sees exactly the view you describe.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "description": "free text over invoice reference and client name",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.all.sort",
+      "contractHash": "ddc70e4dd7b7e672fb235b02a099145886d68923591ab56e6d03d1cef9b729bd",
+      "declarationId": "app/agent/surface/contracts.ts#allInvoicesTableContract",
+      "description": "Sort this table by one of its columns: reference, client_name, status, amount, issue_date, due_date. Pass key: null to clear.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "default": "desc",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Column id to sort by, or null to clear sorting and restore view order"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:app.navigation.goTo",
+      "contractHash": "e79a13ebbff47384afc02fa27c6a67f784a409f6276584f982c94b299c8f9835",
+      "declarationId": "app/agent/surface/contracts.ts#appNavigationContract",
+      "description": "Move the app to one of its routes. Use when the user asks to see a page, or when a capability you need is only registered on another screen.",
+      "effect": "navigation",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "Absolute app route, e.g. /receivables/pending",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:app.navigation.readCurrentRoute",
+      "contractHash": "d3f2ca9950cc77fcc33c7bd1cd92f3c8a9138202babdfb311b583ffd769a1d66",
+      "declarationId": "app/agent/surface/contracts.ts#appNavigationContract",
+      "description": "The route the user is currently looking at, its page title, and every route this app can navigate to. Call this first when the user's visible context matters.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "knownRoutes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "path": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "title",
+          "knownRoutes"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:app.session.read",
+      "contractHash": "96542c9323af26d02742d2c733d7bdc0abf1381efd28320c7d325c36147cc9d0",
+      "declarationId": "app/agent/surface/contracts.ts#appSessionContract",
+      "description": "The signed-in user and their role. A controller may change the ledger; an analyst may only read it.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "role"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.clearFilters",
+      "contractHash": "16be7682ed8bcc4e185c469d38b010b95145d121399f5293105ea54e1eeea15c",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "Remove every filter on this table, restoring the unnarrowed view.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.moveColumn",
+      "contractHash": "26de5a3c39d05da5231ffd4cfe2aeb52afc4b6a8e3428257e29ab9d525a6ea3c",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "Move one movable column a single position left or right.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "left",
+              "right"
+            ]
+          },
+          "id": {
+            "description": "Column id, as reported by readColumns",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "direction"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.readColumnFilters",
+      "contractHash": "eec46f52212371e56c3c4e60dc3235157042255bd885a6f4d64c17db38e50452",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "The per-column filters of this table: which columns can narrow it, in what value format, what each is set to now, and — for a column with a fixed value list — the values that actually occur.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "description": "Value formats — text: a substring, matched case-insensitively (\"acme\"); select: exactly one of the values listed here (\"paid\"); number-range: \"min,max\", leave a side empty for open-ended (\"1000,\" is >=1000); date-range: \"from,to\" as ISO yyyy-mm-dd, either side may be empty (\"2024-01-01,\"). Any kind: the empty string clears that column's filter.",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "options": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "label"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.readColumns",
+      "contractHash": "e52e2051179cc8dace7078298d2be5852f11f325a121d1b1314134e4bbf80cf9",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "The movable columns of this table in display order, each with whether it is currently hidden and whether it may be hidden at all.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "hidden": {
+              "type": "boolean"
+            },
+            "hideable": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "hidden",
+            "hideable"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.readFilters",
+      "contractHash": "6b4f223d23f6ce92d83b5b1e6dfc98adbd9e2f51e07a3c22b3d36493a9a1241b",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "The filters currently narrowing this table, as a key/value map. An absent or empty key is not narrowing anything.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "description": "free text over the client name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.readState",
+      "contractHash": "c36396e474f08f7fc48b774b7f6fe83826c4656a4595a0be2da38dd08d072637",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "The rows currently visible in this table, in view order (at most 100), with the row counts and the active sort. Read this before acting on rows.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "rowCount": {
+            "type": "number"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "direction"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalRows": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "visibleRows": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {},
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "visibleRows",
+          "rowCount",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.setColumnFilters",
+      "contractHash": "3fb3c32e383037339d1f2d806faeaaff9ba34dd6b823f3d756c771105164ddae",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "Narrow this table by its columns. Pass only the column ids you want to change; omitted columns keep their value, and an empty string clears one. Read readColumnFilters first — a select column only accepts a value from its list.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "segment": {
+            "description": "select — exactly one of the values listed by readColumnFilters, or \"\" to clear",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.setColumnVisibility",
+      "contractHash": "04ae73c0ba87d55c86b09727dd4a3252b59632deaefd446c77565b212e235251",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "Show or hide one movable column. Hiding a column changes what the user sees and what an export contains; it never changes which rows match.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "hidden": {
+            "description": "true hides the column, false shows it",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Column id, as reported by readColumns",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "hidden"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.setFilters",
+      "contractHash": "eb87955941d50824a4513cb6eb661c7d7e0215b0cec8d5b88a8b919f63c3f854",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "Narrow this table. Pass only the keys you want to change; omitted keys keep their current value, and an empty string clears one. The valid keys are documented on the input schema. Filters are URL-synced, so the user sees exactly the view you describe.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "description": "free text over the client name",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:clients.list.sort",
+      "contractHash": "b6d3e96509773386bb517416478ae226bda576997e20a7d739f1f7a527e2cad5",
+      "declarationId": "app/agent/surface/contracts.ts#clientsTableContract",
+      "description": "Sort this table by one of its columns: name, segment, payment_terms_days, open_invoices, outstanding, overdue. Pass key: null to clear.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "default": "desc",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Column id to sort by, or null to clear sorting and restore view order"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.clearFilters",
+      "contractHash": "ffb2e246d4c12f716e782610e05919236df961396f92f7b6249d35fbd4cbdda7",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "Remove every filter on this table, restoring the unnarrowed view.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.moveColumn",
+      "contractHash": "45bd06fc6c0fd07be68673d51fc641a6e3da8bfe5ecf7d38be3b570a947d39b9",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "Move one movable column a single position left or right.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "left",
+              "right"
+            ]
+          },
+          "id": {
+            "description": "Column id, as reported by readColumns",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "direction"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.readColumnFilters",
+      "contractHash": "6d1fc337c38ea8661e59968b36db0fc5bba3fc3a3f27ac201c8f57f4926232fc",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "The per-column filters of this table: which columns can narrow it, in what value format, what each is set to now, and — for a column with a fixed value list — the values that actually occur.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "description": "Value formats — text: a substring, matched case-insensitively (\"acme\"); select: exactly one of the values listed here (\"paid\"); number-range: \"min,max\", leave a side empty for open-ended (\"1000,\" is >=1000); date-range: \"from,to\" as ISO yyyy-mm-dd, either side may be empty (\"2024-01-01,\"). Any kind: the empty string clears that column's filter.",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "options": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "label"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.readColumns",
+      "contractHash": "1088cafaae8ff4302dde4508c30125aaa67ccad99f9bf92d80b9f46a8b5d82f5",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "The movable columns of this table in display order, each with whether it is currently hidden and whether it may be hidden at all.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "hidden": {
+              "type": "boolean"
+            },
+            "hideable": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "hidden",
+            "hideable"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.readFilters",
+      "contractHash": "946e8ace1f81f53f7846a5e7adb1c2c4a06c55a8e99ceec7b36f022b4c7e3014",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "The filters currently narrowing this table, as a key/value map. An absent or empty key is not narrowing anything.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chase": {
+            "description": "invoice id whose chase dialog is open, or empty for none. Opening one is what makes domain:update-collection-status available, bound to that invoice",
+            "type": "string"
+          },
+          "due": {
+            "description": "one of \"all\", \"overdue\", \"current\"",
+            "type": "string"
+          },
+          "q": {
+            "description": "free text over invoice reference and client name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "q",
+          "due",
+          "chase"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.readSelection",
+      "contractHash": "b307c0b6f7115a4cb45e40b088fa08f07ff26638e2a68686e2990f13692ce966",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "The row ids currently selected in this table. Actions that operate on a selection take their input from here.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "selectedIds": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "selectedIds",
+          "count"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.readState",
+      "contractHash": "b08725b010eff00fafe76cd39abe682bc8d3a3072ef1b667e896385dca70e539",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "The rows currently visible in this table, in view order (at most 100), with the row counts and the active sort. Read this before acting on rows.",
+      "effect": "read",
+      "kind": "observation",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "rowCount": {
+            "type": "number"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "direction"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalRows": {
+            "type": "number"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "visibleRows": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {},
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "visibleRows",
+          "rowCount",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.selectRows",
+      "contractHash": "b56579c6bf8cadf03f105816d61a7dfdda57aefe9a76a6a9413f8631217894be",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "Select rows in this table, replacing the current selection. Only rows currently visible can be selected — narrow with setFilters first, then read the rows back. Selecting is what makes the selection-bound actions available.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "description": "Row ids to select, replacing the current selection. Pass [] to clear.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.setColumnFilters",
+      "contractHash": "212c27d64f4957c20a82d8b960541b0c756fe099b4edae435f9bfa24e3b53a39",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "Narrow this table by its columns. Pass only the column ids you want to change; omitted columns keep their value, and an empty string clears one. Read readColumnFilters first — a select column only accepts a value from its list.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "number-range — \"min,max\"; leave a side empty for open-ended (\"1000,\" is >=1000), or \"\" to clear",
+            "type": "string"
+          },
+          "client_name": {
+            "description": "select — exactly one of the values listed by readColumnFilters, or \"\" to clear",
+            "type": "string"
+          },
+          "due_date": {
+            "description": "date-range — \"from,to\" as ISO yyyy-mm-dd, either side may be empty (\"2024-01-01,\"), or \"\" to clear",
+            "type": "string"
+          },
+          "segment": {
+            "description": "select — exactly one of the values listed by readColumnFilters, or \"\" to clear",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.setColumnVisibility",
+      "contractHash": "fb83d66fe6cb22b684262286ab18eae4aada2aaedecc1d34a777b910e080abee",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "Show or hide one movable column. Hiding a column changes what the user sees and what an export contains; it never changes which rows match.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "hidden": {
+            "description": "true hides the column, false shows it",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Column id, as reported by readColumns",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "hidden"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.setFilters",
+      "contractHash": "6b53d6734a7f4dc90707499047ebdbe9a3f3d66540159bc053b0f85b67cbe478",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "Narrow this table. Pass only the keys you want to change; omitted keys keep their current value, and an empty string clears one. The valid keys are documented on the input schema. Filters are URL-synced, so the user sees exactly the view you describe.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chase": {
+            "description": "invoice id whose chase dialog is open, or empty for none. Opening one is what makes domain:update-collection-status available, bound to that invoice",
+            "type": "string"
+          },
+          "due": {
+            "description": "one of \"all\", \"overdue\", \"current\"",
+            "type": "string"
+          },
+          "q": {
+            "description": "free text over invoice reference and client name",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "view:invoices.pending.sort",
+      "contractHash": "add43d11f9d917b5c19648ad70f68895c9aeb809d25f09c14c552ab9afcf5c95",
+      "declarationId": "app/agent/surface/contracts.ts#pendingInvoicesTableContract",
+      "description": "Sort this table by one of its columns: reference, client_name, amount, due_date, days_overdue, reminders. Pass key: null to clear.",
+      "effect": "local-state",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "default": "desc",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Column id to sort by, or null to clear sorting and restore view order"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "origin": "app/agent/surface/contracts.ts",
+      "targets": [
+        "web-production"
+      ]
+    },
+    {
+      "capabilityId": "domain:update-collection-status",
+      "confirmation": "never",
+      "contractHash": "ec63e6e35973de029fcab00b92fbe8e539947877d671461ac8dbed93d5bd7c87",
+      "declarationId": "app/agent/surface/contracts.ts#updateCollectionStatusContract",
+      "description": "Record a collections chase against the invoice whose dialog is open: last reminder date, reminders sent, expected payment date, note. Patch semantics — only the fields you pass are written.",
+      "effect": "server-mutation",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedPaymentDate": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the client promised"
+          },
+          "invoiceId": {
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "type": "integer"
+          },
+          "lastReminderDate": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the last chase email went out"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remindersSent": {
+            "maximum": 99,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "type": "object"
+      },
+      "kind": "procedure",
+      "origin": "app/agent/surface/contracts.ts",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_payment_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "invoice_id": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "last_reminder_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reminders_sent": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "last_reminder_date",
+          "reminders_sent",
+          "expected_payment_date",
+          "note"
+        ],
+        "type": "object"
+      },
+      "targets": [
+        "web-production"
+      ]
+    }
+  ],
+  "compilerVersion": "0.17.0",
+  "completeness": {
+    "status": "proven"
+  },
+  "externalContracts": [],
+  "formatVersion": 5,
+  "hash": "5e7bddf124d7611e52ea6687784777212c0ee570edf701cfd76430a4c9eaf277",
+  "targets": [
+    "web-production"
+  ]
+}

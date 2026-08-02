@@ -40,7 +40,7 @@ pnpm test:scaffold   # generate a fresh app in /tmp and run ITS gates
 The rules that keep this project honest:
 
 - No test may require a model provider or API key.
-- The committed surface snapshot (`src/features/devices/__snapshots__`) is
+- The committed surface baseline (`templates/default/.agent-surface/`) is
   agent-facing API — review its diffs like API diffs.
 - One domain operation, one model-visible path: if you add a capability,
   decide direct vs contextual, never both (the host rejects it anyway).

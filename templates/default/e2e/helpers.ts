@@ -1,28 +1,26 @@
 import { expect, type Page } from "@playwright/test";
 
-/** Restore seeded data and wait until the dashboard reflects it. */
-export async function resetData(page: Page) {
-  await page.getByRole("button", { name: "Reset data" }).click();
-  await expect(metricValue(page, "Disabled")).toHaveText("0");
+/** Restore the seeded ledger, then wait for the screen to reflect it. */
+export async function resetLedger(page: Page) {
+  await page.request.post("/api/demo/reset");
 }
 
-export function metricValue(page: Page, label: string) {
-  return page.locator(`[data-metric="${label}"] p`);
+export async function openPending(page: Page) {
+  await resetLedger(page);
+  await page.goto("/receivables/pending");
+  await expect(page.getByRole("heading", { name: "Pending invoices" })).toBeVisible();
+  await expect(page.locator("[data-invoice-row]").first()).toBeVisible();
 }
 
-export async function openDashboard(page: Page) {
-  await page.goto("/dashboard");
-  // The dashboard mounts client-only; wait for real content.
-  await expect(page.getByRole("heading", { name: "Device operations" })).toBeVisible();
-  await expect(page.getByRole("row").nth(1)).toBeVisible();
+export async function switchRole(page: Page, role: "analyst" | "controller") {
+  await page.request.post("/api/session", { data: { role } });
+  await page.reload();
 }
 
-export async function switchRole(page: Page, label: "Olivia — operator" | "Vik — viewer") {
-  await page.getByRole("combobox", { name: "Demo identity" }).click();
-  await page.getByRole("option", { name: label }).click();
-  await expect(page.getByRole("combobox", { name: "Demo identity" })).toContainText(
-    label.split(" — ")[0]!,
-  );
-}
-
-export const MILAN_OFFLINE_NAMES = ["milan-navigli-01", "milan-isola-02", "milan-bovisa-01"];
+/** The seeded ledger's headline figures, as the screens format them. */
+export const LEDGER = {
+  outstanding: "€200,500",
+  overdue: "€102,600",
+  overdueCount: 7,
+  pendingRows: 13,
+} as const;

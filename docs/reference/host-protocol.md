@@ -1,8 +1,8 @@
 # Host protocol
 
-> **This page:** the versioned browser↔server contract the Agent Host speaks over `POST /api/chat` — request, frames, composition rules, limits and error codes. It is application code in `src/agent/host/`, not a dependency ([ADR-0002](../adr/0002-host-protocol-over-react-ai-sdk.md)).
+> **This page:** the versioned browser↔server contract the Agent Host speaks over `POST /agent/chat` — request, frames, composition rules, limits and error codes. It is application code in `app/agent/host/` and `server/agent/host.ts`, not a dependency ([ADR-0002](../adr/0002-host-protocol-over-react-ai-sdk.md)).
 
-**Current version: `1`.**
+**Current version: `2`.** v1 is served alongside it for one minor release, so a tab open across a deploy keeps working.
 
 ## The shape
 
@@ -12,7 +12,7 @@ One POST is **one model step-run**. The server streams NDJSON frames back and ho
 2. The server resolves the session from the cookie, composes the catalog — governed domain tools for that actor **plus** the declared frontend tools — rejects duplicate paths, runs one Mastra step and streams frames.
 3. If the run ends at frontend tool calls, it **suspends**: the browser executes them through Agent Surface, waits for the surface to absorb them, appends the results and posts the next step.
 
-The third point is the reason the protocol exists in this shape: **confirmations wait between requests**, not inside a held-open stream ([ADR-0005](../adr/0005-confirmation-wait-between-steps.md)). A human decision never blocks a connection, and a dropped connection never strands a decision.
+The third point is the reason the protocol exists in this shape: **frontend tools execute between requests**, never inside a held-open stream. A view capability runs against the live screen, and anything that waits on a human — a confirmation dialog, a file picker — waits in that gap. No connection is blocked by a decision, and no decision is stranded by a dropped connection ([ADR-0005](../adr/0005-confirmation-wait-between-steps.md)).
 
 ## Request
 
@@ -89,7 +89,7 @@ Three consequences for a host:
   mounted. Tell the model to call `surface_discover` with no arguments and
   never to invent a token. This bites hardest on a capability whose only path
   to the model is the surface — an `expose.aiSdk: false` procedure such as
-  `devices.disable` disappears entirely, while direct mode carries on working.
+  `invoices.issue` disappears entirely, while direct mode carries on working.
 
 ### Scope
 
@@ -123,12 +123,12 @@ Declaring a frontend tool grants **visibility only**. Its executor never leaves 
 
 | Frame | Carries |
 |---|---|
-| `step-start` | `stepId`, ids, the **domain half of the composed catalog**, plus the effective `catalogMode` and `scope` so the Inspector shows what the model was actually offered |
+| `step-start` | `stepId`, ids, the **domain half of the composed catalog**, plus the effective `catalogMode` and `scope` — what the model was actually offered, on the record |
 | `text-delta` | Answer text |
 | `reasoning-delta` | Model reasoning, on its own frame so the UI can fold it and never confuse it with the answer |
 | `tool-call` | `toolCallId`, `wireName`, `canonicalId`, `executor: "server" \| "browser"`, `input` |
 | `tool-result` | The same ids plus `ok` and `result` |
-| `inspector` | Correlated events from `runtime`, `domain` or `host` lanes — forwarded audit activity, filtered to this session's actor. Also carries `catalog.collision`, `catalog.truncated`, `catalog.undecodable` and `inspector.dropped`, so every reduction is visible |
+| `inspector` | Correlated diagnostics from the `runtime`, `domain` or `host` lanes — forwarded audit activity, filtered to this session's actor. Also carries `catalog.collision`, `catalog.truncated`, `catalog.undecodable` and `inspector.dropped`, so every reduction is visible. The browser collects these in `app/agent/inspector/inspector-store.ts`; this template renders no panel over it — subscribe to the store, or read the frames |
 | `step-finish` | `finishReason`, `responseMessages`, `pendingToolCalls`, optional `usage` |
 | `error` | `{ code, message }` — a typed host error, never an exception |
 
@@ -150,9 +150,9 @@ A malformed frame is itself reported as an `error` frame with `PROTOCOL_DECODE_E
 ## Catalog composition rules
 
 - **Per actor, per turn, never cached across users.** The domain half is produced by the oRPC Agent runtime for the session's actor, so exposure and policy are re-evaluated every step.
-- **One uniform namespace, reversed by map only.** Both planes use the same encoding (`:` → `_`, `.` → `__`), so `domain:devices.list` reaches the model as `domain_devices__list`. Encoding is *not* reversible by string surgery: a name that would exceed 64 characters is shortened and hashed, and `decodeWireName` refuses those rather than returning a plausible wrong id. The browser reverses through `toolset.wireNameMap()`; the server captures names as it assigns them. A name that cannot be mapped is **withheld from the model** and reported as `catalog.undecodable` — a capability that cannot be audited under its canonical id is not offered at all.
-- **Duplicate paths cost the duplicate, not the turn.** If a domain operation appears both as a direct tool and as a contextual frontend declaration, v2 drops the frontend declaration, keeps the governed server tool, records `catalog.collision` in the audit log, warns in the Inspector, and runs the step. v1 returns **409 `CATALOG_COLLISION`** instead. Across a large codebase a double-exposure is a matter of when, and taking down the whole assistant is a disproportionate response to one misconfigured capability — [build-time guards](../specs/production-scalability.md) catch it earlier.
-- **No silent reduction.** Every drop — collision, truncation, undecodable name, or an audit entry dropped because a reader fell behind — emits a frame. A gap the Inspector does not know about reads as "nothing happened".
+- **One uniform namespace, reversed by map only.** Both planes use the same encoding (`:` → `_`, `.` → `__`), so `domain:list-invoices` reaches the model as `domain_list-invoices`. Encoding is *not* reversible by string surgery: a name that would exceed 64 characters is shortened and hashed, and `decodeWireName` refuses those rather than returning a plausible wrong id. The browser reverses through `toolset.wireNameMap()`; the server captures names as it assigns them. A name that cannot be mapped is **withheld from the model** and reported as `catalog.undecodable` — a capability that cannot be audited under its canonical id is not offered at all.
+- **Duplicate paths cost the duplicate, not the turn.** If a domain operation appears both as a direct tool and as a contextual frontend declaration, v2 drops the frontend declaration, keeps the governed server tool, records `catalog.collision` in the audit log, emits an `inspector` frame, and runs the step. v1 returns **409 `CATALOG_COLLISION`** instead. Across a large codebase a double-exposure is a matter of when, and taking down the whole assistant is a disproportionate response to one misconfigured capability — `pnpm view:check` catches it earlier, at build time.
+- **No silent reduction.** Every drop — collision, truncation, undecodable name, or an audit entry dropped because a reader fell behind — emits a frame. A gap nobody is told about reads as "nothing happened".
 
 ### Orphaned server calls
 
@@ -160,258 +160,280 @@ A model may call a server tool and a browser tool in the *same* message. Mastra 
 
 ## End to end workflow example
 
-The sections above define the contract in the abstract. This one follows a single user message through every hop of it, showing what each party sends, to whom, and why.
+The sections above define the contract in the abstract. This one follows a
+single user message through every hop of it, showing what each party sends, to
+whom, and why.
 
-**The scenario.** Olivia Operator (`u-operator`, role `operator`, permissions `devices:read` + `devices:disable`) is on `/dashboard` with no filters and nothing selected. She types:
+**The scenario.** Carla Controller (`carla@example.com`, role `controller`) is on
+`/receivables/pending` with no filters. She types:
 
-> Disable the offline devices in Milan.
+> Which invoices are overdue, and by how much?
 
-In the seed data three devices match: `d-mi-03`, `d-mi-05`, `d-mi-07`. Fulfilling this takes six protocol steps, because the agent has to look before it acts — read state, narrow the filters, re-read, select, mutate, report.
+Seven of the thirteen pending invoices are past due, worth €102,600 together.
+Answering takes three protocol steps — and the first one is the interesting one,
+because the model calls a **server** tool and a **browser** tool in the same
+message.
 
-**Two transports, and the difference matters.** Model traffic goes to `POST /api/chat` and carries no authority. The actual mutation goes to `POST /api/orpc`, authorized from the session cookie. The destructive call never travels over the chat endpoint.
+**Two transports, and the difference matters.** Model traffic goes to
+`POST /agent/chat` and carries no authority. Any actual mutation goes to
+`POST /rpc`, authorized from the session cookie. The two never mix.
 
 | Hop | Direction | Purpose |
 |---|---|---|
 | ① | browser → server | Post the history plus the **live view catalog** |
-| ② | server, internal | Build the domain catalog for this actor; reject duplicate paths |
+| ② | server, internal | Build the domain catalog for this actor, scoped by route |
 | ③ | server → model | One provider request: system, messages, **both planes as one tool list** |
 | ④ | model → server | Which tools to call, with arguments |
 | ⑤ | server → browser | Stream frames; hand back the run's messages and what to execute |
 | ⑥ | browser, internal | Execute through Agent Surface against live component state |
-| ⑦ | browser → server | The mutation itself, over oRPC — a different endpoint entirely |
 
 ### ① Browser → server: the step request
 
-The browser is the only party that knows what is on screen, so **it, not the server, decides what the model may see**. Before each step it snapshots the live registry and projects every mounted capability into a wire descriptor (`transport-client.ts`). Nothing is registered ahead of time; the catalog is rebuilt from scratch on every step so that `available` is never stale.
+The browser is the only party that knows what is on screen, so **it, not the
+server, decides what the model may see**. Before each step it snapshots the live
+registry and projects every mounted capability into a wire descriptor
+(`transport-client.ts`). Nothing is registered ahead of time; the catalog is
+rebuilt from scratch on every step.
 
 ```json
 {
-  "protocolVersion": 1,
+  "protocolVersion": 2,
   "conversationId": "conv_7f3a",
   "turnId": "turn_01",
   "stepIndex": 0,
+  "pathname": "/receivables/pending",
   "messages": [
-    { "role": "user", "content": "Disable the offline devices in Milan." }
+    { "role": "user", "content": "Which invoices are overdue, and by how much?" }
   ],
-  "frontendTools": [
-    {
-      "wireName": "view_devices__table__readState",
-      "canonicalId": "view:devices.table.readState",
-      "plane": "view",
-      "description": "[view · read] Visible rows (in view order), current selection, current sorting",
-      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-      "effect": "read",
-      "confirmation": "never",
-      "available": true
-    },
-    {
-      "wireName": "domain_devices__disable",
-      "canonicalId": "domain:devices.disable",
-      "plane": "domain",
-      "description": "[domain · destructive · requires confirmation] [currently unavailable: Select at least one device first] Disable the given devices. Destructive: they stop reporting data. Currently bound to the 0 selected device(s).",
-      "inputSchema": {
-        "type": "object",
-        "properties": { "reason": { "type": "string" } },
-        "additionalProperties": false
+  "catalog": {
+    "mode": "direct",
+    "scope": ["app", "invoices", "reporting", "collections"],
+    "frontendTools": [
+      {
+        "wireName": "view_invoices__pending__readState",
+        "canonicalId": "view:invoices.pending.readState",
+        "plane": "view",
+        "description": "[view · read] The rows currently visible in this table, in view order (at most 100), with the row counts and the active sort. Read this before acting on rows.",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+        "effect": "read",
+        "confirmation": "never"
       },
-      "effect": "destructive",
-      "confirmation": "required",
-      "available": false,
-      "unavailableReason": "Select at least one device first"
-    }
-    // …10 more: filters.read/set, table.selectRows/sort,
-    //           drawer.readState/open/close,
-    //           app.navigation.readCurrentRoute/goTo, app.session.read
-  ]
+      {
+        "wireName": "domain_update-collection-status",
+        "canonicalId": "domain:update-collection-status",
+        "plane": "domain",
+        "description": "[domain · server-mutation] Upsert the chase status of the invoice whose dialog is open…",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "remindersSent": { "type": "integer" }, "note": { "type": "string" } },
+          "additionalProperties": false
+        },
+        "effect": "server-mutation",
+        "confirmation": "never"
+      }
+      // …13 more: setFilters, clearFilters, sort, selectRows, readFilters,
+      //           readSelection, readColumns, readColumnFilters,
+      //           setColumnFilters, setColumnVisibility, moveColumn,
+      //           app.navigation.*, app.session.read
+    ],
+    "frontendState": [
+      { "wireName": "domain_update-collection-status", "available": false,
+        "unavailableReason": "Open an invoice's chase dialog first" }
+    ]
+  }
 }
 ```
 
-Three details in that payload carry most of the design:
+Three details in that payload carry most of the design.
 
-**`deviceIds` is missing from `domain_devices__disable`, and that is deliberate.** The table binds it to the live selection and does not mark it overridable, so `reduceInputSchema` deletes the key from `properties` and `required` before the descriptor is ever built. The model is not *asked* to leave the selection alone — it is given no field in which to express one. `additionalProperties: false` closes the remaining gap.
+**`invoiceId` is missing from `domain_update-collection-status`, and that is
+deliberate.** The chase dialog binds it to the invoice on screen and does not
+mark it overridable, so `reduceInputSchema` deletes the key from `properties`
+and `required` before the descriptor is built. The model is not *asked* to leave
+the invoice alone — it is given no field in which to name one.
+`additionalProperties: false` closes the remaining gap.
 
-**The unavailable capability is still sent.** Rather than hide it, the host declares it with `available: false` and folds the reason into the description. The model can then plan the enabling step ("select rows first") instead of discovering a missing tool and guessing. This is a deliberate token cost paid for better planning.
+**Availability is in `frontendState`, not in the descriptor.** The stable half —
+name, description, schema — goes in the provider's tool block, which sits at the
+front of the prompt; folding live state into it would invalidate the cached
+prefix behind the whole conversation on every step. The volatile half is
+rendered as one compact system message *after* the conversation, where it costs
+a few hundred tokens and invalidates nothing.
 
-**`domain:devices.disable` appears here, in the *browser* catalog.** It is `expose.aiSdk: false` on the server, so it is not a server tool at all. It reaches the model only as a contextual reference owned by the component that has the selection — which is what makes the binding above possible.
+**`domain:update-collection-status` appears here, in the *browser* catalog.** It
+is `expose.aiSdk: false` on the server, so it is not a server tool at all. It
+reaches the model only as a contextual reference owned by the component that has
+the invoice — which is what makes the binding above possible.
 
 ### ② Server, internal: composing the other half
 
-The browser's catalog is untrusted input describing a UI. The server independently builds the **domain** half from the authenticated session, so a tampered request can add view declarations but can never grant itself a governed capability.
+The browser's catalog is untrusted input describing a UI. The server
+independently builds the **domain** half from the authenticated session, so a
+tampered request can add view declarations but can never grant itself a governed
+capability.
 
-`describePipeline` walks the capability registry and applies the exposure filter and any discovery-phase policies for this actor:
+`toAISDKTools` walks the registry and applies exposure and any discovery-phase
+policies for this actor, scoped by the route's floor:
 
 ```
-registry:  devices.list ✓   devices.get ✓   devices.disable ✗ (aiSdk:false)   devices.enable ✗ (test-only)
-       →   domain_devices__list, domain_devices__get
+scope         app · invoices · reporting · collections
+registry      10 capabilities
+  →  list-invoices ✓   create-invoice ✓   update-invoice ✓   issue-invoice ✓
+     delete-invoice ✓  mark-invoice-paid ✓  receivables-summary ✓  collections-aging ✓
+     update-collection-status ✗ (aiSdk: false)
+     list-clients ✗ (tagged `clients` — out of scope on this route)
+  →  8 domain tools
 ```
+
+Had Ada Analyst asked instead, `analyst-hides-writes` would have removed the
+five writes at **discovery**, and the model would have been offered three reads.
+Not three reads and five errors — three reads.
 
 Then the anti-duplication rule runs across both halves:
 
 ```ts
-findCatalogCollisions(step.frontendTools, ["domain:devices.list", "domain:devices.get"])  // → []
+findCatalogCollisions(step.catalog.frontendTools, domainInfo.map((d) => d.canonicalId))  // → []
 ```
 
-Empty, so the step proceeds. Had `devices.disable` also been `expose.aiSdk: true`, it would have reached the model twice — once governed and bound, once raw and unbound — and the server would have returned **409 `CATALOG_COLLISION`** instead of running the step.
+Empty, so the step proceeds. Had `update-collection-status` also been
+`expose.aiSdk: true`, it would have reached the model twice — once governed and
+bound, once raw and unbound. Under v2 the duplicate frontend declaration is
+dropped and the governed server tool kept, and the reduction is reported as an
+`inspector` frame rather than silently applied.
 
-Finally the 12 view descriptors become **execute-less** AI SDK tools. The model can call them; there is no code path by which the server could run one:
-
-```ts
-tool({ description: d.description, inputSchema: jsonSchema(d.inputSchema) })  // no execute
-```
+Finally the 15 view descriptors become **execute-less** AI SDK tools. The model
+can call them; there is no code path by which the server could run one.
 
 ### ③ Server → model: one flat tool list
 
-Both planes are flattened into a single provider request. **The model is never told which tools run where** — it sees fourteen tools, distinguished only by the `view_` / `domain_` naming convention and the effect prefix in each description. Where execution happens is host bookkeeping.
+Both planes are flattened into a single provider request. **The model is never
+told which tools run where** — it sees 23 tools, distinguished only by the
+`view_` / `domain_` naming convention and the effect prefix in each description.
+Where execution happens is host bookkeeping.
 
-```json
-{
-  "model": "anthropic/claude-sonnet-4-5",
-  "system": "You are the assistant embedded in a device operations dashboard.\nTools prefixed \"view_\" read or change what the user currently sees…",
-  "messages": [
-    { "role": "user", "content": "Disable the offline devices in Milan." }
-  ],
-  "tools": [
-    { "name": "view_devices__table__readState",  "description": "[view · read] …",                                "input_schema": {} },
-    { "name": "view_devices__table__selectRows", "description": "[view · local-state] …",                         "input_schema": {} },
-    { "name": "domain_devices__disable",         "description": "[domain · destructive · requires confirmation] [currently unavailable: …]", "input_schema": {} },
-    { "name": "domain_devices__list",            "description": "List devices with optional status/city filters. Read-only.", "input_schema": {} },
-    { "name": "domain_devices__get",             "description": "Fetch one device by id… Read-only.",             "input_schema": {} }
-    // …14 total: 12 browser-executed, 2 server-executed
-  ]
-}
-```
-
-The system prompt shapes *planning*, not permissions. Delete every guideline in it and the enforcement below is unchanged — availability, schema surgery, confirmation and server authorization all hold regardless of what the model decides to attempt.
+The system prompt shapes *planning*, not permissions. Delete every guideline in
+it and the enforcement below is unchanged — exposure, schema surgery, approvals
+and server authorization all hold regardless of what the model decides to
+attempt.
 
 ### ④ Model → server: the tool calls
 
-Told to read before it changes, the model asks for current state first. Both requested tools are execute-less, so the AI SDK cannot run them and the step suspends.
+The model reads the ageing ladder and narrows the screen **in the same message**:
 
 ```json
 { "stop_reason": "tool_use", "content": [
-  { "type": "text",     "text": "Let me check the current filters and visible rows." },
-  { "type": "tool_use", "id": "toolu_01A", "name": "view_devices__filters__read",    "input": {} },
-  { "type": "tool_use", "id": "toolu_01B", "name": "view_devices__table__readState", "input": {} }
+  { "type": "text",     "text": "Checking the ageing ladder and narrowing to overdue." },
+  { "type": "tool_use", "id": "toolu_01A", "name": "domain_collections-aging",           "input": {} },
+  { "type": "tool_use", "id": "toolu_01B", "name": "view_invoices__pending__setFilters", "input": { "due": "overdue" } }
 ]}
 ```
 
+**This is the sharp edge the host exists to absorb.** Mastra executes the server
+tool — the procedure really runs, the audit record is really written — and then
+suspends the run for the browser *without emitting that result*. It appears in
+neither `fullStream` nor `stream.toolResults`. Left alone, the model would
+receive a `tool-call` with no `tool-result`, which most providers reject
+outright, and the UI would show a card stuck on "running" forever.
+
+So the host captures domain results as they are produced and answers any call
+Mastra left open (`settleOrphanedServerCalls`). A call with **no** captured
+result never ran, and is told so plainly — `TOOL_NOT_EXECUTED`, `retry: "yes"` —
+rather than being reported as a failure it did not have ([ADR-0009](../adr/0009-orphaned-server-tool-calls.md)).
+
 ### ⑤ Server → browser: frames, then hand back control
 
-The server streams what happened, then returns two things it will immediately forget: the messages this run produced, and the calls the browser must execute. **After the last frame the server holds no run state** — the browser owns the conversation.
+The server streams what happened, then returns two things it will immediately
+forget: the messages this run produced, and the calls the browser must execute.
+**After the last frame the server holds no run state** — the browser owns the
+conversation.
 
 ```jsonl
-{"type":"step-start","stepId":"st_9c2","turnId":"turn_01","conversationId":"conv_7f3a","domainTools":[{"canonicalId":"domain:devices.list","wireName":"domain_devices__list","description":"List devices…","requiresApproval":false},{"canonicalId":"domain:devices.get","wireName":"domain_devices__get","description":"Fetch one device…","requiresApproval":false}]}
-{"type":"text-delta","text":"Let me check the current filters"}
-{"type":"tool-call","toolCallId":"toolu_01A","wireName":"view_devices__filters__read","canonicalId":"view:devices.filters.read","executor":"browser","input":{}}
-{"type":"tool-call","toolCallId":"toolu_01B","wireName":"view_devices__table__readState","canonicalId":"view:devices.table.readState","executor":"browser","input":{}}
-{"type":"step-finish","stepId":"st_9c2","finishReason":"tool-calls","responseMessages":[…],"pendingToolCalls":[{"toolCallId":"toolu_01A","wireName":"view_devices__filters__read","canonicalId":"view:devices.filters.read","input":{}},{"toolCallId":"toolu_01B","wireName":"view_devices__table__readState","canonicalId":"view:devices.table.readState","input":{}}],"usage":{"inputTokens":3480,"outputTokens":96,"totalTokens":3576,"cachedInputTokens":3072,"reasoningTokens":64,"reportedSteps":1}}
+{"type":"step-start","stepId":"stp_qdb6","turnId":"turn_01","conversationId":"conv_7f3a","scope":["app","invoices","reporting","collections"],"domainTools":[…8 entries…]}
+{"type":"reasoning-delta","text":"Read the ageing, then narrow the table to what is overdue."}
+{"type":"text-delta","text":"Checking the **ageing ladder** and narrowing to `overdue`.\n"}
+{"type":"tool-call","toolCallId":"toolu_01A","wireName":"domain_collections-aging","canonicalId":"domain:collections-aging","executor":"server","input":{}}
+{"type":"tool-call","toolCallId":"toolu_01B","wireName":"view_invoices__pending__setFilters","canonicalId":"view:invoices.pending.setFilters","executor":"browser","input":{"due":"overdue"}}
+{"type":"inspector","lane":"runtime","eventType":"capability.requested","summary":"capability.requested · collections-aging"}
+{"type":"inspector","lane":"runtime","eventType":"capability.completed","summary":"capability.completed · collections-aging"}
+{"type":"tool-result","toolCallId":"toolu_01A","wireName":"domain_collections-aging","canonicalId":"domain:collections-aging","ok":true,"result":[…]}
+{"type":"inspector","lane":"runtime","eventType":"model.usage","summary":"16 in · 16 out (4 reasoning) · 1 model step"}
+{"type":"step-finish","stepId":"stp_qdb6","finishReason":"tool-calls","responseMessages":[…],"pendingToolCalls":[{"toolCallId":"toolu_01B","wireName":"view_invoices__pending__setFilters","canonicalId":"view:invoices.pending.setFilters","input":{"due":"overdue"}}],"usage":{…}}
 ```
 
-`domainTools` on `step-start` is **Inspector data only** — descriptions without schemas, so the panel can show the domain half of the catalog. The model's tool definitions never travel back to the browser.
+That `tool-result` for `toolu_01A` is the orphan settler at work: Mastra never
+emitted it, and the host wrote it from the result it captured while the tool ran.
+
+`domainTools` on `step-start` is **diagnostics only** — descriptions without
+schemas, so a consumer can show the domain half of the catalog. The model's tool
+definitions never travel back to the browser.
+
+The `inspector` frames are filtered by actor. The audit log is process-wide and
+concurrent users write to it simultaneously, so an entry is forwarded only when
+it is positively attributable to this session; one carrying no actor is dropped
+rather than broadcast.
 
 ### ⑥ Browser, internal: execution against live state
 
-`dispatchFrontendToolCall` resolves each `wireName` against the **live** toolset rather than a handler cached when the step began — a component unmounted mid-step yields a typed `CAPABILITY_NOT_FOUND`, never a call into a stale closure. The model's `toolCallId` becomes the Agent Surface `invocationId`, so a retried transport cannot double-execute.
+`dispatchFrontendToolCall` resolves the wire name against the **live** toolset
+rather than a handler cached when the step began — a component unmounted
+mid-step yields a typed `CAPABILITY_NOT_FOUND`, never a call into a stale
+closure. The model's `toolCallId` becomes the Agent Surface `invocationId`, so a
+retried transport can never double-execute.
 
-```jsonc
-// toolu_01A
-{ "ok": true, "value": { "status": "all", "city": null } }
-
-// toolu_01B — 24 rows, all cities, nothing selected
-{ "ok": true, "value": {
-    "visibleRows": [
-      { "id": "d-mi-01", "name": "milan-duomo-01",  "status": "online",  "city": "Milan", "disabled": false },
-      { "id": "d-mi-03", "name": "milan-navigli-01","status": "offline", "city": "Milan", "disabled": false }
-      // …22 more
-    ],
-    "selectedIds": [],
-    "sorting": null } }
-```
+`setFilters` routes through the same setter the toolbar calls, which writes the
+URL. The table re-renders to seven rows, and the address bar now reads
+`?due=overdue` — the view the agent produced is one the user can bookmark.
 
 ### ⑥b Browser, internal: waiting for the surface to catch up
 
-Re-deriving the catalog every step is only half of "live". The other half is *when*: a tool call returns to the loop across **microtasks**, while the surface it changed moves on a **React commit** — registration happens in a passive effect, and availability is pushed from an effect that runs after it. Microtasks drain first, so a snapshot taken the instant a call resolves is the surface as it was *before* the call.
+Re-deriving the catalog every step is only half of "live". The other half is
+*when*: a tool call returns to the loop across **microtasks**, while the surface
+it changed moves on a **React commit**. Microtasks drain first, so a snapshot
+taken the instant a call resolves is the surface as it was *before* the call.
 
-So the loop waits. After any call whose `effect` is not `read`, `surface-settle.ts` blocks until the registry's version moves and then stays quiet for one short window — gated on the registry's own `surface-changed`, not on a fixed macrotask yield, which would only be a guess about React's scheduler. The wait sits between calls too, so a model that emits `filters.set` and `table.readState` in one step reads the filtered rows rather than the previous ones.
+So the loop waits (`settle.ts`): after any call whose effect is not `read`, it
+yields task boundaries until the registry has been quiet for a whole one, with a
+floor of two ticks and a ceiling that stops a never-settling screen from holding
+the turn.
 
-Budgets are small and bounded (`60ms` to start moving, `40ms` of quiet, `750ms` ceiling). A read-only step skips the gate outright; a surface that never stops changing times out and says so in the Inspector rather than stalling the turn. The first-change budget doubles as the commit yield: a contextual binding's `describe()` text rides the latest-ref, written during render, so it needs a commit rather than a version bump — and there is no event for that.
+**Quiet is not done.** React Router wraps navigation *and* `setSearchParams` — which
+is how this app's filters and sort are applied — in `startTransition`. The URL
+has already moved; the tree commits tens to hundreds of milliseconds later,
+across task boundaries that are perfectly silent. So the caller passes a
+predicate (`until`), and quiet does not count until the committed location
+agrees with the URL. Without it, step 2 would be handed the catalog of a screen
+the user has already left.
 
-A **route change** gets its own budget (`2s` to start moving, `5s` ceiling), keyed on the route actually having changed rather than on the declared effect. A warm navigation has the destination mounted by the time the action resolves and spends none of it; a cold one, where the route's code split and its data still have to arrive, is the case where the surface has not moved *at all* and the old catalog looks settled because nothing has happened yet.
+### Steps 2–3: reading back, and answering
 
-This is also an authoring contract, not only a host one. A `navigation` action must resolve when the router **commits** the transition — `router.push` returns immediately, and resolving there reports success while the old page is still mounted (D23). `nav-rail.tsx` holds the promise until `usePathname` reports the new route, which is why the capability lives in the layout: a rail owned by the page it navigates away from cannot observe its own success.
-
-### Steps 1–3: narrowing, and why the catalog changes underneath
-
-Each subsequent step repeats hops ①–⑥ with the history grown by one exchange **and the catalog re-derived from scratch**. That re-derivation is the point: as the UI changes, so does what the model is offered.
-
-| Step | Model calls | Effect on the surface |
+| Step | Model calls | Result |
 |---|---|---|
-| 1 | `view_devices__filters__set { "status": "offline", "city": "Milan" }` | Table re-renders to 3 rows; surface version bumps |
-| 2 | `view_devices__table__readState` | Sees `d-mi-03`, `d-mi-05`, `d-mi-07` |
-| 3 | `view_devices__table__selectRows { "ids": ["d-mi-03","d-mi-05","d-mi-07"] }` | Selection set; **`domain:devices.disable` becomes available** |
+| 1 | `view_invoices__pending__readState` | 7 rows, `totalRows: 13`, `truncated: false` |
+| 2 | *(none)* | The answer, from what step 1 returned |
 
-The `selectRows` precondition verifies every id is currently visible, so the model cannot select a row the filters are hiding. On step 3 the procedure's `when: () => selectedIds.length > 0` flips true, and the descriptor posted at step 4 differs from the one posted at step 0:
-
-```jsonc
-{
-  "wireName": "domain_devices__disable",
-  "description": "[domain · destructive · requires confirmation] Disable the given devices. Destructive: they stop reporting data. Currently bound to the 3 selected device(s).",
-  "inputSchema": { "type": "object", "properties": { "reason": { "type": "string" } }, "additionalProperties": false },
-  "effect": "destructive",
-  "confirmation": "required",
-  "available": true          // ← was false; unavailableReason gone
-}
-```
-
-The binding's `describe()` re-ran, so the count is live. `deviceIds` is still absent — availability changed, the exposure ceiling did not.
-
-### Step 4: the destructive call
-
-The model now calls the only tool it has for this, supplying the only field left in the schema:
-
-```json
-{ "type": "tool_use", "id": "toolu_05A", "name": "domain_devices__disable",
-  "input": { "reason": "Offline in Milan; requested by operator." } }
-```
-
-**The confirmation happens in the browser, between two HTTP requests.** Agent Surface returns `CONFIRMATION_REQUIRED`; the toolset — built `topology: "remote"` with `confirmations: "wait"` — awaits the dialog in the gap before the next step is posted. No server stream is held open across the human decision, and a dropped connection cannot strand it ([ADR-0005](../adr/0005-confirmation-wait-between-steps.md)). The approval is single-use and bound to this exact effective input.
-
-### ⑦ Browser → server: the mutation, over oRPC
-
-Only after approval does the real call go out — to a **different endpoint**, through the same authenticated client every button in the app uses:
-
-```http
-POST /api/orpc  →  devices.disable
-x-dpas-invocation-id: toolu_05A
-x-dpas-confirmation-id: cnf_4d81
-
-{
-  "deviceIds": ["d-mi-03", "d-mi-05", "d-mi-07"],   // injected by the binding, never by the model
-  "reason": "Offline in Milan; requested by operator."
-}
-```
-
-Those headers are **audit correlation, never authorization**. The procedure authorizes from the session cookie alone: a forged `x-dpas-confirmation-id` buys nothing, and a viewer posting this request by hand is refused identically whether the headers are present or not. The agent path and the human path differ only in what gets *recorded*, not in what gets *allowed*.
-
-The response comes back, and reconciliation closes the loop: `invocation-settled(ok)` for a `domain:` capability invalidates the devices query, TanStack refetches, and the table updates for the human **through the same data path a button click would have used**. The agent has no privileged write channel into the UI.
-
-```json
-{ "disabled": 3, "devices": [ /* … */ ] }
-```
-
-### Step 5: reporting
-
-The tool result returns as `{ "ok": true, "value": { "disabled": 3, … } }`, the model emits its answer, and the run finishes with `finishReason: "stop"` and an empty `pendingToolCalls`. The turn ends having spent six of the eight steps the browser allows.
+`readState` reports `rowCount` **and** `totalRows`, which is what makes the
+narrowing legible: seven alone could be the whole ledger, and a model that
+cannot tell will not think to widen. The answer — *"7 invoices are overdue,
+worth €102,600"* — matches the Overdue KPI card exactly, because the screen and
+the capability compute it with the same function.
 
 ### What the trace demonstrates
 
-**The catalog is a per-step push, not a session registration.** Six POSTs carried six freshly derived catalogs. That is what keeps `available` honest, and it is also the protocol's main cost — every descriptor is re-serialized and re-tokenized on every step.
+**The catalog is a per-step push, not a session registration.** Three POSTs
+carried three freshly derived catalogs. That is what keeps availability honest,
+and it is also the protocol's main cost — every descriptor is re-serialized on
+every step, which is why the volatile half is kept out of the tool block.
 
-**Three independent gates stopped the model from overreaching, none of them the prompt.** Schema surgery removed `deviceIds`; `when()` withheld the capability until a selection existed; the server re-authorized from the cookie. Each holds on its own.
+**Scope shaped what the model was offered, and authority shaped what existed.**
+The route's floor removed `list-clients`; `expose.aiSdk: false` removed the
+contextual capability from the *server* half; for an analyst, `analyst-hides-writes`
+would have removed five more at discovery. Three different mechanisms, three
+different questions, none of them the prompt.
 
-**Visibility and authority stayed separated throughout.** The browser decided what could be *seen*; the server decided what could be *done*. The one payload that changed real data never went near the chat endpoint.
-
-For the same run viewed as correlated Inspector events rather than wire payloads, see [Tracing a tool call](../guides/tracing-a-tool-call.md).
+**Visibility and authority stayed separated throughout.** The browser decided
+what could be *seen*; the server decided what could be *done*. Had the model
+asked to issue an invoice, `gateModelWrites` would have suspended it into an
+approval record and the ledger would not have moved ([ADR-0010](../adr/0010-approvals-over-confirmations.md)).
 
 ## Run limits
 
@@ -423,7 +445,8 @@ Enforced by host code on both sides, not by prompt text:
 | Inactivity between chunks | 45 s | server (`RUN_LIMITS.modelTimeoutMs`) |
 | Protocol steps per turn | 8 | browser (`MAX_STEPS_PER_TURN`) |
 | Turn deadline | 180 s | browser (`TURN_DEADLINE_MS`) |
-| Identical consecutive failures | 3 | browser (`MAX_IDENTICAL_FAILURES`) |
+| Identical consecutive failures | 3 | browser (`LOOP_LIMITS.maxIdenticalFailures`) |
+| Any consecutive failures | 4 | browser (`LOOP_LIMITS.maxConsecutiveFailures`) |
 
 ## Host error codes
 
@@ -435,10 +458,11 @@ Distinct from capability errors — these are transport and runtime conditions:
 | `PROTOCOL_DECODE_ERROR` | 400 | Malformed request or frame. Never used for a legal catalog that is merely too large |
 | `CATALOG_TOO_LARGE` | 413 | A named limit was exceeded; the message carries plane, count and limit |
 | `CATALOG_COLLISION` | 409 | One operation exposed through two model-visible paths. **v1 only** — under v2 the duplicate is dropped and the turn continues |
-| `MODEL_NOT_CONFIGURED` | 503 | No live provider configured |
+| `MODEL_NOT_CONFIGURED` | 503 | No provider key is set, so there is no model to run |
 | `MODEL_TIMEOUT` | — | No chunk within the inactivity window |
 | `MODEL_ERROR` | — | The provider rejected the request |
 | `RUN_LIMIT_EXCEEDED` | — | A limit above was hit; the message says which |
-| `TRANSPORT_FAILED` | — | The stream failed |
+| `TRANSPORT_FAILED` | — | The stream failed. The cause is deliberately not relayed: a fetch rejection carries the URL and sometimes the body, and this message reaches the model |
+| `NO_SUCH_TOOL` | — | The model named a tool in neither plane. Answered with `retry: "no"` — the step's catalog is the complete set that exists |
 
-Capability-level failures are in [Error codes](errors.md); the identifiers that tie a run together are in [Tracing a tool call](../guides/tracing-a-tool-call.md).
+Capability-level failures are in [Error codes](errors.md); the layers the identifiers tie together are in [Architecture](../concepts/architecture.md).

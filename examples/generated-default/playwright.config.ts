@@ -1,47 +1,43 @@
 import { defineConfig, devices } from "@playwright/test";
-import path from "node:path";
 
 /**
- * E2E against a PRODUCTION build in scripted-model mode (ADR-0006): the full
- * live pipeline — route, Mastra loop, protocol, browser dispatch,
- * confirmation, oRPC — runs with zero external credentials. The guided demo
- * specs exercise the no-model path on the same server.
+ * e2e against a PRODUCTION build with the scripted model
+ * (`MODEL_PROVIDER=mock`), so CI exercises the whole live pipeline — host
+ * protocol, Mastra loop, client-tool suspension, oRPC execution,
+ * reconciliation — and never needs a credential.
+ *
+ * `DPAS_DATA_DIR` points at a scratch directory: these tests issue invoices
+ * and record chases, and a suite that mutates the developer's own `.data/` is
+ * a suite nobody runs twice.
  */
+const PORT = 3210;
+
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
-  // One worker: specs mutate one shared embedded store and reset it between tests.
+  fullyParallel: false,
   workers: 1,
+  forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
+  reporter: process.env.CI ? "line" : "list",
   use: {
-    baseURL: "http://localhost:3100",
+    baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
   },
   projects: [
     {
       name: "desktop",
       use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
-      testIgnore: /mobile\.spec\.ts/,
-    },
-    {
-      name: "mobile",
-      use: { ...devices["iPhone 14"] },
-      testMatch: /mobile\.spec\.ts/,
     },
   ],
   webServer: {
-    command: "pnpm exec next build && pnpm exec next start -p 3100",
-    port: 3100,
-    reuseExistingServer: !process.env.CI,
-    timeout: 300_000,
+    command: "node build/index.mjs",
+    url: `http://localhost:${PORT}/api/health`,
+    reuseExistingServer: false,
+    timeout: 60_000,
     env: {
+      PORT: String(PORT),
       MODEL_PROVIDER: "mock",
-      // The production build defaults runtime key entry off; the model-settings
-      // spec covers the opt-in path a local operator would use.
-      ALLOW_RUNTIME_MODEL_KEY: "true",
-      DPAS_DATA_DIR: path.join(import.meta.dirname, "test-results", ".data-e2e"),
+      DPAS_DATA_DIR: ".data-e2e",
     },
   },
 });

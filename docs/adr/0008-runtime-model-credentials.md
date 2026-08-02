@@ -1,6 +1,14 @@
 # ADR-0008 — Model keys may be connected from the UI, in server memory only
 
-**Status:** accepted · 2026-07-30
+**Status:** superseded · 2026-07-30 → **superseded 2026-08-02**
+
+> **Superseded.** The template no longer accepts a model key from the browser.
+> The reasoning below about *why that was dangerous* is still worth reading —
+> one process shares the key with every visitor, which is why it was
+> development-only — but the feature is gone rather than guarded. A provider is
+> configured in `.env` and selected by which key is present
+> (`server/mastra.ts`), and the browser's model picker chooses only among ids
+> the server already allows. Nothing about a key crosses to the client.
 
 ## Context
 
