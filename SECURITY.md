@@ -13,12 +13,12 @@ vulnerability"). You will get an acknowledgement within a few days.
   only, with keys left commented).
 - The generated application ships a **demo identity system** (signed local
   cookie, default secret). It is explicitly not production authentication and
-  is documented as the seam to replace
-  (`src/server/auth/session.ts` in generated apps).
+  is documented as the seam to replace (`server/auth.ts` in generated apps).
 - Security-relevant properties of the generated architecture (deny-by-default
-  capability exposure, server re-authorization, single-use input-bound
-  confirmations, one execution path per operation) are covered by
-  deterministic tests; regressions there are treated as security bugs.
+  capability exposure, server re-authorization, server-side approvals for
+  consequential operations, bound inputs removed from the advertised schema,
+  one execution path per operation) are covered by deterministic tests;
+  regressions there are treated as security bugs.
 
 Vulnerabilities in the upstream capability providers belong to their own
 trackers — see the SECURITY.md of

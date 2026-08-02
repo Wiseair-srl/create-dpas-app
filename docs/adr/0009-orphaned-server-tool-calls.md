@@ -4,12 +4,12 @@
 
 ## Context
 
-Found with a live model, not by the test suite. A user asked *"disable the
-offline devices in Turin and filter them in the table"*; the model replied
-with one assistant message containing **both** `domain_devices__list` (a
-server tool) and view tools (client tools). The view tools completed, the
-table filtered correctly — and `domain:devices.list` sat on "running"
-forever. The turn then stalled.
+Found with a live model, not by the test suite, in the device-operations
+dashboard this template's example domain grew out of. A user asked *"disable the
+offline devices in Turin and filter them in the table"*; the model replied with
+one assistant message containing **both** a server tool and view tools. The view
+tools completed, the table filtered correctly — and the server tool's card sat
+on "running" forever. The turn then stalled.
 
 Reproduced against Mastra directly. When a step contains a server tool call
 *and* a client tool call:
@@ -45,8 +45,8 @@ transport and correlation. Execution, authorization and audit remain entirely
 inside the orpc-agent runtime — the wrapper only observes.
 
 The scripted model now **batches a server tool with a client tool in its
-first message**, so the deterministic e2e exercises this path on every run,
-and `live-mock.spec.ts` asserts the domain card reaches `data-status="ok"`.
+first message**, so the deterministic e2e exercises this path on every run, and
+`e2e/copilot.spec.ts` asserts the domain card reaches `data-status="ok"`.
 
 ## Consequences
 

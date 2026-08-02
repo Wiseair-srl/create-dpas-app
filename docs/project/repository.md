@@ -29,7 +29,7 @@ That is the property that keeps the scaffolder honest: anything the generated ap
 
 Review a diff in either artifact like an API diff, because it is one — a changed description is a changed prompt, and a capability that gains a surface has gained an audience. What the domain gate does **not** do is evaluate policies: it reports that `gate-model-writes` and `analyst-hides-writes` exist and in which phases, never which capabilities they gate. A `0` in its APPROVAL column is a statement about metadata, not about reachability.
 
-CI runs all six on Node 22 and 24, and additionally installs a generated app with **npm** to catch pnpm-only assumptions.
+CI runs lint, typecheck, tests, build and the three gates on **Node 22 and 24**; the e2e and scaffold-smoke suites run once, on 22. A separate job installs a generated app with **npm** to catch pnpm-only assumptions, and the docs site is built on every run so a dead link fails the build.
 
 ## Working on the template
 
@@ -53,9 +53,9 @@ Two review habits carry unusual weight here:
 
 ## Documentation
 
-The guides that ship inside every generated app live in `templates/default/docs/` and are the single source for the corresponding pages on this site — [Architecture](../concepts/architecture.md), the three capability guides, [Tracing a tool call](../concepts/architecture.md) and [Security and confirmation](../security/model.md) are `@include`d from there, so app and site can never drift.
+Three guides ship inside every generated app, in `templates/default/docs/`, and are the single source for their pages on this site: [Architecture](../concepts/architecture.md), [Adding a capability](../guides/adding-a-capability.md) and [Security model](../security/model.md) are `@include`d from there, so the app and the site can never drift. Edit them in the template, never twice.
 
-Everything else — this page, the concepts, the reference and the ADRs — lives in `docs/`.
+Everything else — this page, the concepts, the reference and the ADRs — lives in `docs/`. Root markdown (`README`, `CONTRIBUTING`, `SECURITY`, `CODE_OF_CONDUCT`) is `@include`d by wrapper pages under `/project`, for the same reason.
 
 ```bash
 pnpm docs:dev       # local docs site with hot reload

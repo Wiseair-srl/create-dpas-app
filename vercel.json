@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm docs:build",
+  "outputDirectory": "docs/.vitepress/dist",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "build": {
+    "env": {
+      "DOCS_REPO_URL": "https://github.com/Wiseair-srl/create-dpas-app",
+      "DOCS_REPO_BRANCH": "main"
+    }
+  }
+}

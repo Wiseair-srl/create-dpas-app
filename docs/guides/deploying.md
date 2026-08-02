@@ -54,7 +54,7 @@ A JSON file with a 50-thread cap. Mastra Memory over Postgres drops in behind th
 | A durable approval coordinator, and `strict: true` | a forgotten approval is a lost decision |
 | Audit forwarded somewhere durable | the tap is bounded and volatile |
 | `/mcp` put behind real authorization | it currently trusts the same demo cookie |
-| A provider key in the environment | there is no runtime key-entry path any more |
+| A provider key in the environment | it is the only way in — the app never accepts a key from a browser ([ADR-0008](../adr/0008-runtime-model-credentials.md)) |
 | Exposure reviewed: every `expose.aiSdk: true` | it is the whole model-visible domain surface |
 | `GATED_CAPABILITIES` reviewed | anything irreversible or externally visible belongs there |
 | Every `sideEffect` / `risk` still honest | they drive policy, UI treatment and review |

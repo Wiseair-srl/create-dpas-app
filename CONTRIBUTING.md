@@ -35,15 +35,25 @@ pnpm test            # template contract tests + CLI unit tests, no LLM
 pnpm build
 pnpm test:e2e        # Playwright against a production build, scripted model
 pnpm test:scaffold   # generate a fresh app in /tmp and run ITS gates
+pnpm check:example   # committed generator output ↔ current output
+pnpm view:check      # the view plane ↔ its committed contract
+pnpm domain:check    # the domain plane ↔ its committed snapshot
 ```
+
+After changing the template run `pnpm regen:example`; after changing a
+capability run `pnpm view:snapshot` and/or `pnpm domain:snapshot` in
+`templates/default` and commit the artifact.
 
 The rules that keep this project honest:
 
 - No test may require a model provider or API key.
-- The committed surface baseline (`templates/default/.agent-surface/`) is
-  agent-facing API — review its diffs like API diffs.
+- **Both committed inventories are agent-facing API** —
+  `templates/default/.agent-surface/contract.json` for the view plane and
+  `capabilities.snapshot.json` for the domain plane. Review their diffs like API
+  diffs: a changed description is a changed prompt.
 - One domain operation, one model-visible path: if you add a capability,
-  decide direct vs contextual, never both (the host rejects it anyway).
+  decide direct vs contextual, never both (the host refuses to offer it twice
+  anyway, but the decision belongs in review).
 - The template must start with zero configuration after `create`.
 
 ## Making a release
