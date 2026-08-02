@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { PACKAGE_MANAGERS, type PackageManager } from "./pm.js";
 
-export type ModelProvider = "demo" | "anthropic" | "openai";
+export type ModelProvider = "none" | "anthropic" | "openrouter";
 
 export interface CliOptions {
   projectName?: string;
@@ -49,9 +49,9 @@ export function parseCliArgs(argv: string[]): CliOptions {
   }
 
   const provider = values["model-provider"];
-  if (provider !== undefined && !["demo", "anthropic", "openai"].includes(provider)) {
+  if (provider !== undefined && !["none", "anthropic", "openrouter"].includes(provider)) {
     throw new CliArgumentError(
-      `Unknown model provider "${provider}". Use one of: demo, anthropic, openai.`,
+      `Unknown model provider "${provider}". Use one of: none, anthropic, openrouter.`,
     );
   }
 
@@ -85,7 +85,7 @@ Usage:
 Options:
   -y, --yes                 Accept all defaults, no prompts
       --package-manager     pnpm | npm | yarn | bun
-      --model-provider      demo | anthropic | openai  (demo needs no API key)
+      --model-provider      none | anthropic | openrouter  (uncomments its key in .env)
       --install             Install dependencies (default in prompts)
       --no-install          Skip dependency installation
       --git                 Initialize a git repository

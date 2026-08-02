@@ -17,7 +17,7 @@ The closed enum from `@agent-surface/core`. These reach the model for `view:*` c
 | Code | Means | The model should |
 |---|---|---|
 | `CAPABILITY_NOT_FOUND` | Not on the current surface | Re-read the catalog; the page changed |
-| `CAPABILITY_NOT_AVAILABLE` | Present, but not callable now — `reason` says why | Do the enabling step first (*“Select at least one device”*) |
+| `CAPABILITY_NOT_AVAILABLE` | Present, but not callable now — `reason` says why | Do the enabling step first (*“Select at least one draft invoice”*) |
 | `AMBIGUOUS_INSTANCE` | Several mounted instances match | Name the instance |
 | `COMPONENT_UNMOUNTED` | The owner left the page | Re-read the surface |
 | `STALE_CAPABILITY` | The registration is from a previous mount | Re-read the surface |
@@ -43,14 +43,14 @@ From `@orpc-agent/core`, produced by the governed pipeline around your procedure
 | `INPUT_INVALID` | Validation, **before** your handler runs |
 | `UNAUTHENTICATED` · `FORBIDDEN` | Authentication and authorization |
 | `POLICY_DENIED` · `POLICY_FAILED` | A policy denied, threw, or timed out — failure is closed |
-| `APPROVAL_*` | Server approvals: `REQUIRED`, `PENDING`, `REJECTED`, `EXPIRED`, `CONSUMED`, `INPUT_MISMATCH`, `SELF_APPROVAL`, `UNSERIALIZABLE_INPUT`. The template leaves server approvals off; the seam is `src/server/agent/runtime.ts` |
+| `APPROVAL_*` | Server approvals: `REQUIRED`, `PENDING`, `REJECTED`, `EXPIRED`, `CONSUMED`, `INPUT_MISMATCH`, `SELF_APPROVAL`, `UNSERIALIZABLE_INPUT`. The template gates `issue-invoice` and `delete-invoice` this way; the coordinator is configured in `server/runtime.ts` |
 | `EXECUTION_FAILED` | Your handler threw a non-typed error |
 | `OUTPUT_INVALID` | The handler returned something the output schema rejects |
 | `TIMEOUT` · `CANCELLED` | Execution did not complete |
 | `AUDIT_UNAVAILABLE` · `ADAPTER_ERROR` | Infrastructure |
 | `INTERNAL_ERROR` | Anything else — deliberately opaque |
 
-Your own typed procedure errors (`.errors({ DEVICE_NOT_FOUND: … })`) pass through with their public message. Everything else the model sees is either a public code/message or a generic `INTERNAL_ERROR`: stack traces and internals never reach it.
+Your own typed procedure errors (`.errors({ INVOICE_NOT_FOUND: … })`) pass through with their public message. Everything else the model sees is either a public code/message or a generic `INTERNAL_ERROR`: stack traces and internals never reach it.
 
 ## Host errors (transport)
 
@@ -65,8 +65,8 @@ Two host-produced *tool* results are worth knowing:
 
 ## Reading them in the app
 
-The tool cards in the assistant render the same payloads the model receives, so if you can read the card you can read the transcript the model reasoned over. The Inspector's Timeline pairs every `tool-call` with its `tool-result`. Both are covered in [Tracing a tool call](../guides/tracing-a-tool-call.md).
+The tool pills in the copilot render the same payloads the model receives, so if you can read the card you can read the transcript the model reasoned over. The host guarantees the pairing behind them: every `tool-call` frame gets a `tool-result`, including the ones the runtime dropped ([ADR-0009](../adr/0009-orphaned-server-tool-calls.md)).
 
 ## Testing them
 
-Assert the code *and* the retry hint — they are API. `src/features/devices/capabilities.test.tsx` covers unavailability, locked fields, denial, expiry and mismatch without a model; see [Testing without an LLM](../guides/testing.md).
+Assert the code *and* the retry hint — they are API. `capabilities/governance.test.ts` and `app/features/invoices/capabilities.test.tsx` cover hiding, unavailability, locked fields and the approve/reject paths without a model; see [Testing without an LLM](../guides/testing.md).

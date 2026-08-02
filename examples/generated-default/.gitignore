@@ -1,10 +1,9 @@
 # dependencies
 node_modules/
 
-# next.js
-.next/
-out/
-next-env.d.ts
+# build output
+dist/
+build/
 
 # local data store (recreated and reseeded automatically)
 .data/
@@ -13,6 +12,9 @@ next-env.d.ts
 coverage/
 playwright-report/
 test-results/
+# the e2e suite's scratch store — DPAS_DATA_DIR in playwright.config.ts, so a
+# suite that issues invoices never touches the one above
+.data-e2e/
 
 # env — .env.example is the committed reference
 .env

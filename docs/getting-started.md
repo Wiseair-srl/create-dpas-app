@@ -1,12 +1,12 @@
 # Getting started
 
-> **This page:** scaffold an app, run it with no configuration, and read what the guided demo just proved.
+> **This page:** scaffold an app, run it with no configuration, and find the four files that carry the architecture.
 
 ## Requirements
 
 - **Node >= 22.13** (the Mastra runtime's floor).
 - Any of **pnpm · npm · yarn · bun** — the CLI asks, or takes `--package-manager`.
-- **No API key and no database.** The generated app runs a full agent pipeline without either.
+- **No API key and no database.** Everything but the copilot runs without either.
 
 ## Scaffold
 
@@ -30,51 +30,65 @@ bun create dpas-app my-agent-app
 
 :::
 
-The CLI prompts for the project name, package manager, model provider, dependency install and git init. `--yes` accepts every default; every prompt has a flag ([CLI reference](reference/cli.md)). Generation happens in a temp directory and is moved into place only when complete, so a failed run never leaves half a project behind — and it never writes a secret.
+The CLI prompts for the project name, package manager, copilot model, dependency install and git init. `--yes` accepts every default; every prompt has a flag ([CLI reference](reference/cli.md)). Generation happens in a temp directory and is moved into place only when complete, so a failed run never leaves half a project behind — and it never writes a secret.
 
 ```bash
 cd my-agent-app
 pnpm dev          # http://localhost:3000
 ```
 
-## Run the guided demo
+Two processes start: Vite for the SPA and a Hono server for `/rpc`, `/agent/chat`, `/api/*` and `/mcp`, proxied across so the client only ever uses relative paths. In production the same server serves all of it.
 
-Open the app and press **Run guided demo** in the assistant panel. A deterministic runner executes the golden scenario through the *same* pipeline a live model uses:
+## What works with no key
 
-> *“Show me the offline devices in Milan, select the visible devices, and disable them.”*
+Everything except the copilot's ability to think.
+
+- **Filter, sort, hide columns.** All URL-synced, so a narrowed view is bookmarkable and shareable — which is the same property that makes an *agent*-narrowed view something you can look at.
+- **Open a chase dialog and record a reminder.** That writes through the governed pipeline, exactly as the agent's path would.
+- **Switch identity in the header.** As **Ada — analyst**, `issue-invoice` does not grey out — it disappears. Ask the server for it directly and it answers `Capability not found`, which is what a probing caller should learn: nothing.
+
+## Then add a key
+
+```bash
+# .env — which key you set IS the provider choice; there is no separate switch.
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Restart, press **⌘J**, and ask:
+
+> *Which invoices are overdue, and by how much?*
 
 Watch the order of events, because the architecture is visible in it:
 
-1. **`view:devices.filters.set`** applies the filter — a semantic capability registered by the filter component, not a synthesized click.
-2. **`view:devices.table.selectRows`** selects the visible rows.
-3. **`domain:devices.disable` becomes available.** It was in the catalog all along, marked unavailable with a reason (*“Select at least one device first”*). Availability is state, and state is disclosed.
-4. **A confirmation card names the exact devices.** The `deviceIds` were bound from the live selection at execution time and locked — the model cannot aim this call anywhere else.
-5. **On approval the server executes**, re-deriving your identity and re-validating the input as it would for any client, and writes an audit record.
-6. **The table reconciles** from fresh server data — the same invalidation path a button click uses. The runner then re-reads the table and reports the *verified* outcome.
+1. **`domain:collections-aging`** runs on the server — a governed read, re-authorized, audited.
+2. **`view:invoices.pending.setFilters`** runs *in your tab*, against the live screen. The table narrows and the URL moves with it, because the agent called the same setter the toolbar calls.
+3. **`view:invoices.pending.readState`** reads the rows back, with `totalRows` alongside `rowCount` so the model can tell what it narrowed away.
+4. **The answer is grounded in step 3** — and its figures match the KPI cards, because both come from one function in `capabilities/model.ts`.
 
-Press **Deny** instead and the model receives a typed `CONFIRMATION_INVALID` result. Nothing happens, and the assistant says so rather than claiming success.
+Now ask it to issue a draft invoice. It will not: a model-initiated `issue-invoice` comes back as an **approval card**, and the ledger does not move until you decide. The same operation from the app's own Issue button goes through ungated — a person clicking in their own session has already expressed intent. That asymmetry is [ADR-0010](adr/0010-approvals-over-confirmations.md), and it is the decision most worth understanding here.
 
-## Look at the three things that make it a stack
+## The four files that carry it
 
-**The Inspector** (assistant panel → *Inspector*) has three tabs:
+| File | Why it matters |
+|---|---|
+| `capabilities/registry.ts` | One flat map. A key IS the capability id — the audit identity, the MCP tool name, the manifest key, and the string a policy matches on |
+| `capabilities/policies.ts` | `gate-model-writes` and `analyst-hides-writes` — the two sentences that define authority |
+| `app/agent/domain/manifest.ts` | The frontend's exposure ceiling. Read the comment about what is deliberately *absent* |
+| `app/lib/hooks/useTableAgentComponent.ts` | A table screen's entire presentation plane, written once |
 
-- **Catalog** — every capability the model can currently see, with availability reasons, confirmation requirements and locked bindings, plus what is hidden from the current identity.
-- **Timeline** — correlated events from all four layers, tied together by `turnId` and `toolCallId`. See [Tracing a tool call](guides/tracing-a-tool-call.md).
-- **Map** — the topology, and the rule it encodes: one model-facing catalog never implies one execution authority.
-
-**The identity switcher** in the header swaps two server-signed demo identities. Olivia (operator) may disable devices; Vik (viewer) may not — and for Vik `domain:devices.disable` is not greyed out, it is *absent*. **Authority hides; state discloses.** Watch the Catalog tab while switching.
-
-**`/architecture`** in the running app is a guided tour of the same material as [Architecture](concepts/architecture.md).
+`/architecture` in the running app is a shorter version of the same tour.
 
 ## Commands in the generated app
 
 ```bash
-pnpm dev          # run the app
-pnpm test         # capability contracts, governance, host units — no LLM
-pnpm test:e2e     # Playwright over a production build, scripted model
-pnpm lint         # eslint
-pnpm typecheck    # strict TypeScript
-pnpm build        # production build
+pnpm dev            # Vite + the Hono server
+pnpm test           # governance, capability contracts, the experience layer
+pnpm test:e2e       # Playwright over a production build, scripted model
+pnpm view:inspect   # the view plane: every capability the app can expose
+pnpm view:check     # its gate: source ↔ committed contract drift
+pnpm domain:inspect # the domain plane: the same inventory, runtime policies included
+pnpm domain:check   # its gate: governance ↔ committed capabilities.snapshot.json
+pnpm lint · typecheck · build
 ```
 
 Nothing above needs a model provider or a key. See [Testing without an LLM](guides/testing.md).
@@ -82,6 +96,6 @@ Nothing above needs a model provider or a key. See [Testing without an LLM](guid
 ## Next
 
 - **Understand it:** [The dual-plane model](concepts/dual-plane.md) → [Anatomy of a capability](concepts/capabilities.md)
-- **Extend it:** [Adding a view capability](guides/adding-a-view-capability.md) · [Adding a domain capability](guides/adding-a-domain-capability.md) · [Contextual domain actions](guides/contextual-domain-actions.md)
+- **Extend it:** [Adding a capability](guides/adding-a-capability.md)
 - **Attach a real model:** [Connecting a model](guides/connecting-a-model.md)
 - **Ship it:** [Deploying](guides/deploying.md)

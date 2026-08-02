@@ -1,18 +1,18 @@
 # Architecture
 
-This app implements the **Dual-Plane Agent Stack (DPAS)**: four core layers
-with explicit ownership, plus a replaceable chat shell. The point of the
-architecture is a single sentence:
+This app implements the **Dual-Plane Agent Stack**: two capability providers,
+an application-owned host between them and the runtime, and a replaceable chat
+shell. The point of the whole arrangement is one sentence:
 
 > One agent-facing toolset, two execution planes, one authoritative path per
 > operation.
 
 ```
-assistant-ui  (experience: chat, streaming, tool & confirmation UX)
+assistant-ui   (experience: thread, streaming, tool cards, approval cards)
      ↕
-Agent Host    (application-owned: protocol, composition, dispatch, correlation)
+Agent Host     (application-owned: protocol, composition, dispatch, correlation)
      ↕
-Mastra        (runtime: planning, agent loop, run limits)
+Mastra         (runtime: planning, the agent loop, run limits)
    ↙    ↘
 Agent Surface        oRPC Agent
 (view:* — browser)   (domain:* — server, authoritative)
@@ -20,118 +20,99 @@ Agent Surface        oRPC Agent
 
 ## Why each layer exists
 
-**Agent Surface** ([src/agent/surface/](../src/agent/surface/), registrations in
-[src/features/devices/components/](../src/features/devices/components/))
-exists because "what the agent may do to the page" must be an explicit,
-lifecycle-aware contract — not DOM access. Components register semantic
-capabilities (`view:devices.filters.set`) that exist only while mounted,
-validate input, disclose availability ("Select at least one device first"),
-and reject stale calls. If a component is not annotated, it does not exist
-for the agent.
+**Agent Surface** (`app/agent/surface/`, registrations in
+`app/lib/hooks/useTableAgentComponent.ts` and the screens) exists because "what
+the agent may do to the page" must be an explicit, lifecycle-aware contract —
+not DOM access. Components register semantic capabilities that exist only while
+mounted, validate input, disclose availability with a reason, and reject stale
+calls. If a component is not annotated, it does not exist for the agent.
 
-**oRPC Agent** ([src/server/agent/runtime.ts](../src/server/agent/runtime.ts)
-over [src/server/orpc/procedures.ts](../src/server/orpc/procedures.ts))
-exists because backend operations need governance a tool list cannot provide:
-deny-by-default exposure per surface, policy evaluation, input validation,
-audit, and error sanitization. A procedure without `meta.agent` is invisible
-to every agent. The same procedures serve the dashboard UI — one
-implementation, every consumer.
+**oRPC Agent** (`server/runtime.ts` over `capabilities/`) exists because backend
+operations need governance a tool list cannot provide: deny-by-default exposure
+*per surface*, policy evaluation, input validation, approvals, audit, and error
+sanitization. A procedure without `meta.agent` is invisible to every agent. The
+same procedures serve the UI through `/rpc` — one implementation, every
+consumer.
 
-**The Agent Host** ([src/agent/host/](../src/agent/host/)) exists because the
-two providers must never own each other, and the runtime must not own either.
-Someone has to compose the per-turn catalog, refuse duplicate paths, map
-canonical ids to provider-safe wire names, route each call to its executor,
+**The Agent Host** (`app/agent/host/`, `server/agent/host.ts`) exists because
+the two providers must never own each other, and the runtime must not own
+either. Someone has to compose the per-request catalog, refuse duplicate paths,
+map canonical ids to provider-safe wire names, route each call to its executor,
 and carry correlation ids across the browser/server boundary. That someone is
-application code you can read: [protocol.ts](../src/agent/host/protocol.ts)
-(the versioned transport), [catalog.ts](../src/agent/host/catalog.ts),
-[wire-names.ts](../src/agent/host/wire-names.ts),
-[client-dispatch.ts](../src/agent/host/client-dispatch.ts),
-[transport-client.ts](../src/agent/host/transport-client.ts) (browser half),
-[server-compose.ts](../src/agent/host/server-compose.ts) (server half),
-[identity.ts](../src/agent/host/identity.ts),
-[errors.ts](../src/agent/host/errors.ts).
+application code you can read.
 
-**Mastra** ([src/agent/runtime/](../src/agent/runtime/)) owns the reasoning
-loop — model calls, tool selection, streaming — and nothing else. It consumes
-tools the host composed. It cannot see React, redefine procedures, or bypass
-confirmation: those properties are enforced by runtime code, not by prompt
-text.
+**Mastra** owns the reasoning loop and nothing else. It consumes tools the host
+composed. It cannot see React, redefine procedures or bypass an approval:
+those properties are enforced by runtime code, not by prompt text.
 
-**assistant-ui** ([src/agent/experience/](../src/agent/experience/),
-[src/components/assistant/](../src/components/assistant/)) renders the
-conversation. It is deliberately replaceable: the adapter is one file
-([runtime-adapter.tsx](../src/agent/experience/runtime-adapter.tsx)) over a
-plain message store. Swapping the shell touches zero capability code.
+## The rule that decides a capability's shape
 
-Two details of model output live here rather than in any capability: answers
-are markdown, rendered through react-markdown (a React tree, never injected
-HTML); and reasoning arrives on its own protocol frame, shown as a collapsed
-block so it is never mistaken for the answer. Models that leak their channel
-format into visible text (`<|channel|>analysis…`) are cleaned by
-[sanitize.ts](../src/agent/experience/sanitize.ts), which strips only known
-control tokens and leaves ordinary prose alone.
+A consequential operation gets one of two shapes, and picking the wrong one is
+the most expensive mistake available here.
 
-## The transport (host protocol v1)
+**Bind for context.** When correctness depends on pointing at what the user is
+looking at, make it a contextual reference: `expose.aiSdk: false` on the server,
+an entry in `app/agent/domain/manifest.ts`, and a `useAgentProcedure` binding in
+the component that owns the state. The bound keys are *removed from the
+advertised input schema*, so the model has no field in which to name a different
+target. `update-collection-status` is the example.
 
-The host is logically one layer but physically split. The browser half and
-server half speak a small versioned protocol over `POST /api/chat`:
+**Gate for consequence.** When the risk is what the operation *does*, leave it a
+direct governed tool and let `gateModelWrites` suspend model-initiated calls
+into a server-side approval record. `issue-invoice` is the example.
 
-1. The browser snapshots the live surface into wire descriptors
-   (declaration only — executors stay in the tab) and sends them with the
-   model-message history.
+Do not reach for a binding to make a dangerous operation safer. A contextual
+binding reaches the server over `/rpc` as `surface: "direct"`, which the gate
+lets through ungated by design — so binding a gated capability trades a
+persisted, server-side approval record for a browser-side dialog. That is
+weaker authority on exactly the operations that least want it.
+
+## The transport
+
+The host is logically one layer, physically split. The two halves speak a small
+versioned protocol over `POST /agent/chat`:
+
+1. The browser snapshots the live surface into wire descriptors (declaration
+   only — executors stay in the tab) and posts them with the message history.
 2. The server composes the catalog — governed domain tools for the
-   authenticated actor + the declared frontend tools — rejects duplicate
-   paths, runs one Mastra step, and streams NDJSON frames (`text-delta`,
-   `tool-call`, `tool-result`, `inspector`, `step-finish`).
-3. A run that stops at frontend tool-calls suspends: the browser executes
-   them through Agent Surface (confirmations wait HERE, between requests — no
-   stream is held open across a human decision), waits for the surface to
-   absorb them, appends the results, and posts the next step.
+   authenticated actor, scoped by route, plus the declared frontend tools —
+   drops duplicate paths, runs one Mastra step, and streams NDJSON frames.
+3. A run that stops at frontend tool-calls suspends: the browser executes them
+   through Agent Surface, waits for the surface to absorb them, appends the
+   results and posts the next step.
 
-That wait is load-bearing. A tool call returns to the loop across microtasks;
-the surface it changed moves on a React commit, one macrotask later. Snapshot
-immediately and step N+1 gets the surface as it was BEFORE step N acted — an
-agent that navigates is told the page it just opened has no capabilities. So
-the loop blocks on the registry's own version moving and then going quiet
-([surface-settle.ts](../src/agent/host/surface-settle.ts)), rather than on a
-guess about React's scheduler. Reads skip the gate; nothing waits longer than
-750ms, except a route change, which gets 5s because a cold destination has to
-load its code and its data before it registers anything at all.
+Two details carry most of the design.
+
+**The volatile half never enters the tool block.** Tool definitions sit at the
+front of the provider prompt, so folding live availability into a description
+would invalidate the cached prefix behind the whole conversation on every step.
+Availability and binding text ride in a compact system message *after* the
+conversation, where they cost a few hundred tokens and invalidate nothing.
+
+**The loop waits for the surface to catch up.** A tool call returns across
+microtasks; the screen it changed commits on a React render, one macrotask
+later. Snapshot immediately and step N+1 gets the surface as it was *before*
+step N acted — an agent that navigates is then told the page it just opened has
+no capabilities. `app/agent/host/settle.ts` blocks on the registry's own version
+moving and then going quiet, with a separate budget for a route change, which
+genuinely takes longer.
 
 One sharp edge the host absorbs: a model may call a server tool and a client
-tool in the *same* message. Mastra executes the server tool but suspends for
-the browser without emitting that result — it appears in neither
-`fullStream` nor `stream.toolResults`. The host captures domain results as
-they are produced and answers any call Mastra left open
-([server-compose.ts](../src/agent/host/server-compose.ts),
-`settleOrphanedServerCalls`). Without it the model would receive a tool-call
-with no tool-result — which providers reject — and the UI would show a card
-stuck on "running".
-
-The server keeps no run state; the messages are the state. Run limits (max
-steps, turn deadline, repeated-failure loop detection, model inactivity
-timeout) live in host code on both sides.
+tool in the *same* message. Mastra executes the server tool but suspends for the
+browser without emitting its result. The host captures domain results as they
+are produced and answers any call Mastra left open — without it the model would
+receive a tool-call with no tool-result, which providers reject, and the UI
+would show a card stuck on "running".
 
 ## State, identity, reconciliation
 
-- **Application state** is React Query + the oRPC procedures. After a domain
-  mutation the agent's invocation settles, the registry emits
-  `invocation-settled`, and [wiring.tsx](../src/agent/surface/wiring.tsx)
-  invalidates the devices query — the same path a button click uses.
-  Conversation history is never application state.
-- **Identity** is server-resolved on every request
-  ([src/server/auth/session.ts](../src/server/auth/session.ts)). The browser
-  reads it to shape UI policy; the server re-derives it independently for
-  every oRPC call and every chat step.
-- **The store** ([src/server/db/](../src/server/db/)) is a zero-configuration
-  embedded JSON file. The procedures are its only callers — swap in a real
-  database without touching either plane.
-
-## Modes
-
-- **Guided demo** (default): a deterministic runner
-  ([src/agent/demo/scenario.ts](../src/agent/demo/scenario.ts)) drives the
-  real pipeline. No model.
-- **Live** (`MODEL_PROVIDER=anthropic|openai`): Mastra with a real model.
-- **Mock** (`MODEL_PROVIDER=mock`, used by e2e): a scripted
-  `LanguageModelV2` through the full live pipeline — CI never needs a key.
+- **Application state** is React Query over `/rpc`. After a domain mutation the
+  agent's invocation settles and `app/agent/surface/wiring.tsx` invalidates the
+  cache — the same path a button uses. The agent has no privileged channel.
+- **Identity** is re-derived server-side on every request (`server/auth.ts`).
+  The browser reads it to shape UI; it never asserts it. Correlation metadata
+  the agent path attaches is recorded for audit and explicitly untrusted.
+- **The conversation is not application state.** The protocol is stateless —
+  the messages are the state, carried by the browser. Persistence is explicit
+  and separate (`server/agent/thread-store.ts`), which is what keeps one copy of
+  each message and one writer.

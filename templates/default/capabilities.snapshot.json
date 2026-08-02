@@ -1,0 +1,249 @@
+{
+  "version": 2,
+  "capabilities": [
+    {
+      "id": "collections-aging",
+      "description": "The receivables ageing ladder: outstanding invoices bucketed by how far past due they are (not yet due, 1–30, 31–60, 61–90, over 90 days), with a count and a total in CENTS per bucket. The right read for 'how bad is our collections position'.",
+      "sideEffect": "read",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "collections-aging",
+        "mcp": "collections-aging"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices",
+        "reporting"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:93ab7499dc3c616f8db8780fed0d9f69270803cda913882ad2ef3943db8d7225"
+    },
+    {
+      "id": "create-invoice",
+      "description": "Create a draft invoice for a client. Amount is in CENTS. The due date defaults to the client's agreed payment terms after the issue date. Creates a draft only — issuing it is a separate, confirmed step.",
+      "sideEffect": "write",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "create-invoice",
+        "mcp": "create-invoice"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:5e9be12dbcc9bb4352f4f90546da2fa46d781f7abed7eecb57c79c1e80ca79dd"
+    },
+    {
+      "id": "delete-invoice",
+      "description": "Permanently delete an invoice and its chase history. Only a draft can be deleted — an issued invoice is part of the ledger. Requires the user's approval when a model asks for it.",
+      "sideEffect": "destructive",
+      "risk": "high",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "delete-invoice",
+        "mcp": "delete-invoice"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:d8fc65ae770146f371b05709cf3795eaa95bc4b0ec23e5cae477c0585e1ece9d"
+    },
+    {
+      "id": "issue-invoice",
+      "description": "Issue a draft invoice: send it to the client and enter it in the receivables ledger. Irreversible. Requires the user's approval when a model asks for it.",
+      "sideEffect": "destructive",
+      "risk": "high",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "issue-invoice",
+        "mcp": "issue-invoice"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:d8fc65ae770146f371b05709cf3795eaa95bc4b0ec23e5cae477c0585e1ece9d"
+    },
+    {
+      "id": "list-clients",
+      "description": "List clients with their segment, agreed payment terms, billing email, and their current position: number of open invoices and the total outstanding and overdue in CENTS.",
+      "sideEffect": "read",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "list-clients",
+        "mcp": "list-clients"
+      },
+      "idempotent": false,
+      "tags": [
+        "clients"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:93ab7499dc3c616f8db8780fed0d9f69270803cda913882ad2ef3943db8d7225"
+    },
+    {
+      "id": "list-invoices",
+      "description": "List invoices with their client, amount in cents, status, due date and days overdue. kind=pending: issued and unpaid — the collections working set. kind=draft: not yet issued. kind=all: the whole ledger. Read-only.",
+      "sideEffect": "read",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "list-invoices",
+        "mcp": "list-invoices"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices"
+      ],
+      "policies": [],
+      "redact": {
+        "output": true,
+        "approvalInput": false
+      },
+      "inputSchemaHash": "sha256:af7dd60cfb10e8ae8106d099686953be1e5fd77db1a883ff379de8763eb92a0c"
+    },
+    {
+      "id": "mark-invoice-paid",
+      "description": "Record payment against an issued invoice, settling it. Returns how many days it took to pay, measured from the issue date.",
+      "sideEffect": "write",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "mark-invoice-paid",
+        "mcp": "mark-invoice-paid"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:85aaa56ef8984ded1d9c4ec93795bf01e161f3b9037cbe9c1739575b07ef0f12"
+    },
+    {
+      "id": "receivables-summary",
+      "description": "Receivables headline figures, all amounts in CENTS: outstanding, overdue, draft value, collected in the last 30 days, invoice and overdue counts, and the average days-to-pay over settled invoices (null when nothing has been paid).",
+      "sideEffect": "read",
+      "risk": "low",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "receivables-summary",
+        "mcp": "receivables-summary"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices",
+        "reporting"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:93ab7499dc3c616f8db8780fed0d9f69270803cda913882ad2ef3943db8d7225"
+    },
+    {
+      "id": "update-collection-status",
+      "description": "Upsert the chase status of the invoice whose dialog is open: last reminder date, reminders sent, expected payment date, note. Patch semantics — only the fields you pass are written, and an explicit null clears one.",
+      "sideEffect": "write",
+      "risk": "low",
+      "expose": [
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "mcp": "update-collection-status"
+      },
+      "idempotent": false,
+      "tags": [
+        "collections",
+        "invoices"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:dc6b04a2ff705c4b9e3ecf95b0f01e9aa5fb242d8fee2540c29f5e34d01656ca"
+    },
+    {
+      "id": "update-invoice",
+      "description": "Change a draft invoice's amount (in cents), due date or notes. Issued invoices cannot be edited — correct them with a credit note in a real ledger.",
+      "sideEffect": "write",
+      "risk": "medium",
+      "expose": [
+        "aiSdk",
+        "direct",
+        "mcp",
+        "test"
+      ],
+      "toolNames": {
+        "aiSdk": "update-invoice",
+        "mcp": "update-invoice"
+      },
+      "idempotent": false,
+      "tags": [
+        "invoices"
+      ],
+      "policies": [],
+      "inputSchemaHash": "sha256:7c815bda01e4f1eb81af0a8f8880a9e064027c814d253a9892d42ed428c43607"
+    }
+  ],
+  "excluded": [],
+  "unexposed": [],
+  "runtime": {
+    "policies": [
+      {
+        "name": "gate-model-writes",
+        "phases": [
+          "invocation"
+        ]
+      },
+      {
+        "name": "analyst-hides-writes",
+        "phases": [
+          "discovery",
+          "invocation"
+        ]
+      }
+    ]
+  }
+}

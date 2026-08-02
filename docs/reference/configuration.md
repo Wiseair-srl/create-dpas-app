@@ -2,36 +2,41 @@
 
 > **This page:** every environment variable the generated app reads. All of them are server-side; none is ever exposed to the browser.
 
-The generated `.env` comes from the template's `.env.example` with `MODEL_PROVIDER` set to your CLI choice and **every key left commented**. The app runs with all of it unset.
+The generated `.env` comes from the template's `.env.example` with **every key left commented** — except the one line your `--model-provider` choice uncommented, which arrives empty. The app runs fully with all of it unset: the screens, the governed data layer, the approval flow and the MCP endpoint need nothing. A key adds one thing, the copilot's ability to think.
 
 ## Variables
 
 | Variable | Values | Default | Effect |
 |---|---|---|---|
-| `MODEL_PROVIDER` | `demo` · `anthropic` · `openai` · `openrouter` · `mock` | `demo` | Which model backs the live chat path. `demo` = guided demo only; `mock` = the scripted model used by e2e |
-| `MODEL_ID` | provider model id | per provider (below) | Overrides the model for the selected provider |
-| `ANTHROPIC_API_KEY` | secret | — | Required by `MODEL_PROVIDER=anthropic` |
-| `OPENAI_API_KEY` | secret | — | Required by `MODEL_PROVIDER=openai` |
-| `OPENROUTER_API_KEY` | secret | — | Required by `MODEL_PROVIDER=openrouter` |
-| `ALLOW_RUNTIME_MODEL_KEY` | `true` · `false` | dev: on, production: off | Whether a key may be connected from the assistant panel |
+| `ANTHROPIC_API_KEY` | secret | — | Enables the Anthropic models in the picker |
+| `OPENROUTER_API_KEY` | secret | — | Enables the OpenRouter models in the picker |
+| `ANTHROPIC_MODELS` | comma-separated ids | `claude-sonnet-4-5,claude-haiku-4-5` | Overrides the built-in Anthropic allowlist |
+| `OPENROUTER_MODELS` | comma-separated ids | `anthropic/claude-sonnet-4.5,deepseek/deepseek-chat-v3.1` | Overrides the built-in OpenRouter allowlist |
+| `DEFAULT_MODEL` | `provider/id` | `anthropic/claude-sonnet-4-5` | The model a turn runs on when the browser names none. Ignored unless it is one of the allowed ids |
 | `AUTH_SECRET` | secret | `dpas-dev-secret-change-me` | HMAC secret for the demo session cookie. **Change it before sharing a deployment** |
-| `DPAS_DATA_DIR` | path | `<cwd>/.data` | Where the embedded JSON store writes `db.json` |
-| `NODE_ENV` | standard | — | Production disables runtime key entry unless `ALLOW_RUNTIME_MODEL_KEY=true` |
+| `PORT` | number | `3001` (server) · `3000` (Vite) | In production, where the one process listens. In development, where **Vite** listens |
+| `SERVER_PORT` | number | `3001` | Development only: where the Hono server listens, and what Vite proxies to |
+| `DPAS_DATA_DIR` | path | `<cwd>/.data` | Where the embedded store writes `db.json` and `threads.json` |
+| `MODEL_PROVIDER` | `mock` | — | Test hook only. `mock` swaps in the scripted `LanguageModelV2` the e2e suite runs on |
 
-Default model ids: `anthropic` → `anthropic/claude-sonnet-4-5`; `openai` → `openai/gpt-5.1`; `openrouter` → `anthropic/claude-sonnet-4.5` (the app adds the `openrouter/` gateway prefix; the model must support tool calling).
+**There is no provider switch.** The app decides which providers are available from **which keys are set** (`allowedModels()` in `server/mastra.ts`), so there is no second source of truth to keep in agreement with them. Setting a key enables its models; setting none leaves the composer inert and saying so.
 
-## Precedence
+## Ports, and why there are two names
 
-1. A key connected at runtime from the assistant panel (process memory only) wins while it is set.
-2. Otherwise `MODEL_PROVIDER` plus the matching key from the environment.
-3. A provider selected **without** its key is not live: the app stays in guided-demo mode instead of failing at request time.
+Development runs two processes. Vite serves the SPA and proxies `/rpc`, `/agent`, `/api` and `/mcp` to the Hono server; production runs one process that serves all of it.
+
+`PORT` therefore means "where the app is reachable" — which in development is Vite. If the server read `PORT` too, both would bind the same port, the proxy would target itself, and every `/rpc` call would come back as the SPA's `index.html`. So the server reads `SERVER_PORT` first and the `dev` script sets it explicitly; in production only one process is listening and `PORT` is unambiguous.
+
+The Playwright suite builds and serves on `3210` with `DPAS_DATA_DIR=.data-e2e`, so it collides with neither a running dev server nor your own ledger.
+
+## Model ids
+
+Each list holds the provider's **own** ids; the provider prefix is added for you. Mastra's model router splits on the first slash, so an OpenRouter meta-model genuinely needs the gateway segment twice (`openrouter/openrouter/auto`) — never strip a leading `openrouter/`.
+
+The browser's model picker is a **request**, not an instruction: the server checks whatever arrives against its own allowlist and falls back to the default when it does not match. Identity and authority never come from there.
 
 ## Rules the app enforces
 
-- **No secret reaches the browser.** `GET /api/config` returns the provider, the model id and a masked hint (`••••1234`) — never the key. Nothing model-related is read outside route handlers, and no key is ever placed in a `NEXT_PUBLIC_*` variable.
-- **A runtime key is never persisted.** It is not written to disk, not copied into an env var, not logged, and it is gone on restart ([ADR-0008](../adr/0008-runtime-model-credentials.md)).
-- **The scaffolder writes no secrets.** Generated `.env` files select a provider; keys stay commented with a pointer to where they go.
-
-## Ports
-
-`next dev` and `next start` use `3000` unless you pass `-p`. The Playwright suite builds and serves on `3100` so it never collides with a running dev server.
+- **No secret reaches the browser.** The agent loop runs server-side, so the client never needs a model key and is never sent one. `GET /api/session` returns the user, the allowed model ids and the default — never a key.
+- **The scaffolder writes no secrets.** A generated `.env` is a form to fill in: the chosen provider's key line is uncommented and empty, and every other stays commented.
+- **A key is read once, at boot.** `server/env.ts` loads `.env` and nothing re-reads it per request.

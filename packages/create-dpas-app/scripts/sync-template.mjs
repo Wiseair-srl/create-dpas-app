@@ -12,13 +12,17 @@ const target = path.join(pkgRoot, "template", "default");
 
 const EXCLUDES = new Set([
   "node_modules",
-  ".next",
+  "dist",
+  "build",
   ".data",
+  // the e2e suite's scratch store — present whenever someone ran `pnpm test:e2e`
+  // in the template, and shipping it hands every scaffold prior demo threads
+  ".data-e2e",
   "test-results",
   "playwright-report",
   "coverage",
   ".env",
-  "next-env.d.ts",
+
   "tsconfig.tsbuildinfo",
 ]);
 

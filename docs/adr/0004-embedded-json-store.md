@@ -9,10 +9,10 @@ requiring an external database for first start. Options considered:
   common `create-*` install failure (platform prebuilds, Node ABI drift).
 - **In-memory only** — loses state across restarts; makes "the mutation
   persisted" unverifiable.
-- **JSON file store** (chosen) — `src/server/db/` keeps devices in memory,
+- **JSON file store** (chosen) — `server/db/` keeps the invoice ledger in memory,
   seeds deterministically on first run, and writes through to `.data/db.json`
   atomically. Zero native deps, zero config, survives restarts, resettable
-  (`POST /api/orpc` reset procedure in dev), and completely transparent to a
+  (`POST /api/demo/reset`), and completely transparent to a
   reader tracing a mutation.
 
 The store is intentionally boring: the DPAS demonstration lives in the

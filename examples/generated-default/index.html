@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Receivables — DPAS</title>
+    <script>
+      // Theme before paint: light is the default, "dark" is the opt-in.
+      // Inline so the first frame is already the right colour — a stylesheet
+      // that decides this after hydration shows a white flash on every load.
+      if (localStorage.getItem("dpas-theme") === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/app/main.tsx"></script>
+  </body>
+</html>

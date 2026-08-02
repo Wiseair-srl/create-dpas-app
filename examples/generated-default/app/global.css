@@ -1,0 +1,513 @@
+/* Self-hosted via @fontsource-variable/inter — no render-blocking Google Fonts request */
+@import "@fontsource-variable/inter";
+
+@import "tailwindcss";
+
+@source "./**/*.{ts,tsx}";
+
+/* Class-based dark mode (the theme toggle stamps .dark on <html>). Without
+   this, Tailwind v4 dark: utilities follow the OS scheme instead of the
+   toggle — raw .dark token blocks worked, dark:hidden logo swaps did not. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 10%;
+  --primary: 0 0% 15%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 95%;
+  --secondary-foreground: 0 0% 15%;
+  --muted: 0 0% 95%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 95%;
+  --accent-foreground: 0 0% 15%;
+  --destructive: 0 91% 71%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 0 0% 40%;
+  --radius: 0.5rem;
+  --sidebar-background: 0 0% 97%;
+  --sidebar-foreground: 0 0% 45%;
+  --sidebar-primary: 0 0% 15%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 95%;
+  --sidebar-accent-foreground: 0 0% 15%;
+  --sidebar-border: 0 0% 90%;
+  --sidebar-ring: 0 0% 40%;
+}
+
+.dark {
+  --background: 0 0% 13%;
+  --foreground: 0 0% 90%;
+  --card: 0 0% 15%;
+  --card-foreground: 0 0% 90%;
+  --popover: 0 0% 15%;
+  --popover-foreground: 0 0% 90%;
+  --primary: 0 0% 75%;
+  --primary-foreground: 0 0% 10%;
+  --secondary: 0 0% 18%;
+  --secondary-foreground: 0 0% 90%;
+  --muted: 0 0% 16%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 0 0% 18%;
+  --accent-foreground: 0 0% 90%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 24%;
+  --input: 0 0% 24%;
+  --ring: 0 0% 60%;
+  --radius: 0.5rem;
+  --sidebar-background: 0 0% 10%;
+  --sidebar-foreground: 0 0% 60%;
+  --sidebar-primary: 0 0% 75%;
+  --sidebar-primary-foreground: 0 0% 10%;
+  --sidebar-accent: 0 0% 16%;
+  --sidebar-accent-foreground: 0 0% 90%;
+  --sidebar-border: 0 0% 20%;
+  --sidebar-ring: 0 0% 60%;
+}
+
+@layer base {
+  /* Tailwind v4 makes bare `border` currentColor; the legacy framework CSS
+     restored the shadcn convention of hairline borders by default. Without
+     this every border reads near-black. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter Variable", "Inter", sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Tailwind v4's preflight dropped the `cursor: pointer` v3 gave buttons, so
+     every control in the app hovered as a plain arrow. Restore it for anything
+     that behaves like a control — native buttons plus the Radix primitives that
+     render a div with an ARIA role. Disabled controls keep the arrow.
+     Base layer, so utilities still win: `cursor-col-resize` on the table resize
+     handle and `disabled:cursor-not-allowed` on inputs are unaffected. */
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  [role="radio"]:not([aria-disabled="true"]),
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  [role="option"],
+  /* A label wrapping its own toggle (the `<label><Switch/> Hide …</label>`
+     pattern) is one click target — the text flips the switch, so it reads as
+     one. Field labels tied to a text input by `for` stay on the arrow. */
+  label:has(> button, > input[type="checkbox"], > input[type="radio"], > input[type="file"]) {
+    cursor: pointer;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+ * Design tokens — the dashboard UI system this template ships with (the
+ * gMj-LVcDoDnK), expressed as HSL triplets in the shadcn convention. These
+ * blocks come after the template defaults above, so they override the values
+ * they redefine.
+ *
+ * The system in one line: a dense, cool-grey enterprise surface — page
+ * #f4f6f9, white panels, #e2e6ed hairlines, near-black #1D2130 for primary
+ * actions and active controls, cool-blue #546f9c for secondary text.
+ *
+ * Source palette (light): bg #f4f6f9 · surface #ffffff · border #e2e6ed ·
+ * header/zebra #f8f9fc · accent #1D2130 (= wa-black) · accent-fg #ffffff ·
+ * foreground #1a1f2e · muted #546f9c · accent2 #e67e22.
+ * Source palette (dark): bg #0f1117 · surface #13161f · border #1f2330 ·
+ * input/row-hover #161924 · sidebar #0b0e14 · primary #4f7ef8 · fg #e8eaf0.
+ *
+ * Deviations from the Banani source, all for WCAG AA on small text (badge
+ * labels run at 11px), each keeping the source hue family:
+ *   - success text #16a34a → #15803d on #dcfce7 (3.00 → 4.57)
+ *   - dark muted text #5c647a → #8b93a8 (3.20 → 6.14)
+ *   - dark primary keeps #4f7ef8 but pairs with near-black text, not white
+ *     (3.70 → 5.10)
+ * ------------------------------------------------------------------------- */
+:root {
+  --background: 216 29% 97%; /* #f4f6f9 — cool page grey */
+  --foreground: 225 28% 14%; /* #1a1f2e */
+  --card: 0 0% 100%; /* #ffffff — panels lift off the grey */
+  --card-foreground: 225 28% 14%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 225 28% 14%;
+  --primary: 227 25% 15%; /* #1D2130 — accent; also wa-black */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 225 40% 98%; /* #f8f9fc */
+  --secondary-foreground: 225 28% 14%;
+  --muted: 225 40% 98%; /* #f8f9fc */
+  --muted-foreground: 218 30% 47%; /* #546f9c — cool secondary text */
+  --accent: 218 31% 95%; /* #eef1f6 — menu/ghost hover surface */
+  --accent-foreground: 225 28% 14%;
+  --destructive: 0 74% 42%; /* #b91c1c */
+  --destructive-foreground: 0 0% 100%;
+  --border: 218 23% 91%; /* #e2e6ed — hairline */
+  --input: 220 24% 88%; /* #d8dde7 — a hair darker so fields read on white */
+  --ring: 229 51% 57%; /* wa-blue focus ring */
+  --radius: 6px; /* drives the rounded-lg/md/sm ladder — see @theme below */
+
+  /* Table headers, zebra rows, panel footers — the system's second surface. */
+  --surface-alt: 225 40% 98%; /* #f8f9fc */
+  /* Warm counterpoint (avatars, category dots). Banani --color-light-accent2. */
+  --brand-accent: 28 80% 52%; /* #e67e22 */
+
+  /* Sidebar is a white rail against the grey page, per the Banani shell. */
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 218 30% 47%; /* #546f9c — 5.08:1 on white */
+  --sidebar-primary: 227 25% 15%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 217 100% 92%; /* wa-azure — active nav */
+  --sidebar-accent-foreground: 229 25% 29%;
+  --sidebar-border: 218 23% 91%;
+  --sidebar-ring: 229 51% 57%;
+
+  /* Interactive surface states. Hover is a subtle lift; selected is a stronger
+     brand tint that must read distinctly from hover (not the same swatch). The
+     highlight pair tints attention rows (e.g. possible duplicates). */
+  --hover: 218 31% 95%; /* #eef1f6 — subtle hover lift */
+  --selected: 217 100% 92%; /* wa-azure — selected/active, distinct from hover */
+  --highlight: 48 96% 89%; /* amber-100 — attention row */
+  --highlight-hover: 45 93% 80%; /* amber-200 — attention row on hover */
+  --switch-off: 220 24% 82%; /* off-track grey, reads against white cards */
+
+  /* Ledger semantic tokens (sign + status). Each is a text/solid colour plus
+     the tinted background its badge sits on — the Banani status-pill recipe
+     (solid tint + dot), not an opacity wash. */
+  --positive: 142 72% 29%; /* #15803d — money in */
+  --positive-foreground: 0 0% 100%;
+  --positive-bg: 141 84% 93%; /* #dcfce7 */
+  --negative: 0 74% 42%; /* #b91c1c — money out */
+  --negative-foreground: 0 0% 100%;
+  --negative-bg: 0 93% 94%; /* #fee2e2 */
+  --warning: 26 90% 37%; /* #b45309 */
+  --warning-foreground: 0 0% 100%;
+  --warning-bg: 48 96% 89%; /* #fef3c7 */
+  --pending: 35 92% 33%; /* #a16207 — due / pending */
+  --pending-foreground: 0 0% 100%;
+  --pending-bg: 55 97% 88%; /* #fef9c3 */
+  --info: 224 76% 48%; /* #1d4ed8 */
+  --info-foreground: 0 0% 100%;
+  --info-bg: 214 95% 93%; /* #dbeafe */
+
+  /* Chart data-series tokens (resolved by useChartColors). Light, legible
+     fills; text sign-colors use --positive/--negative above. */
+  --chart-positive: 107 50% 70%; /* #9BD88B inflow / B2G / forecast-in */
+  --chart-positive-soft: 137 27% 45%; /* #539165 expected-in */
+  --chart-negative: 2 80% 75%; /* #F2908C outflow / forecast-out */
+  --chart-negative-soft: 351 57% 60%; /* #D35D6E expected-out */
+  --chart-accent: 211 80% 71%; /* #7BB3F0 B2B */
+
+  /* Categorical line-series ramp (scenario-comparison overlay). Series 1 is
+     reserved for Base; 2-4 follow, hue-separated and mid-lightness so up to
+     4 lines stay tellable apart on both light and dark backgrounds. */
+  --chart-series-1: 229 60% 60%; /* wa-blue — Base */
+  --chart-series-2: 27 90% 55%; /* orange */
+  --chart-series-3: 172 60% 42%; /* teal */
+  --chart-series-4: 292 50% 62%; /* purple */
+}
+
+/* Dark is the Banani source theme (the @theme block's base palette): near-black
+   #0f1117 page, #13161f panels, #1f2330 hairlines, bright #4f7ef8 accent. */
+.dark {
+  --background: 225 21% 7%; /* #0f1117 */
+  --foreground: 225 21% 93%; /* #e8eaf0 */
+  --card: 225 24% 10%; /* #13161f */
+  --card-foreground: 225 21% 93%;
+  --popover: 225 24% 10%;
+  --popover-foreground: 225 21% 93%;
+  --primary: 223 92% 64%; /* #4f7ef8 */
+  --primary-foreground: 225 21% 7%; /* near-black on the bright accent — 5.10:1 */
+  --secondary: 225 28% 14%; /* #1a1f2e */
+  --secondary-foreground: 223 14% 60%; /* #8b93a8 */
+  --muted: 226 22% 15%; /* #1f2330 */
+  --muted-foreground: 223 14% 60%; /* #8b93a8 — lifted from source for AA */
+  --accent: 226 22% 15%; /* #1f2330 — menu/ghost hover surface */
+  --accent-foreground: 225 21% 93%;
+  --destructive: 0 91% 71%; /* #f87171 */
+  --destructive-foreground: 225 21% 7%;
+  --border: 226 22% 15%; /* #1f2330 */
+  --input: 227 24% 11%; /* #161924 */
+  --ring: 223 92% 64%; /* #4f7ef8 */
+
+  --surface-alt: 227 24% 11%; /* #161924 */
+  --brand-accent: 28 80% 52%; /* #e67e22 */
+
+  /* Sidebar is the darkest plane in the source shell. */
+  --sidebar-background: 220 29% 6%; /* #0b0e14 */
+  --sidebar-foreground: 223 14% 60%;
+  --sidebar-primary: 223 92% 64%;
+  --sidebar-primary-foreground: 225 21% 7%;
+  --sidebar-accent: 226 26% 19%; /* #242a3d — active nav */
+  --sidebar-accent-foreground: 225 21% 93%;
+  --sidebar-border: 226 22% 15%;
+  --sidebar-ring: 223 92% 64%;
+
+  /* Dark interactive states: hover is the source --color-row-hover; selected
+     lifts further so it stays distinct from hover. */
+  --hover: 227 24% 11%; /* #161924 */
+  --selected: 226 26% 19%; /* #242a3d */
+  --highlight: 36 38% 26%; /* muted amber-brown attention row */
+  --highlight-hover: 36 42% 33%;
+  --switch-off: 226 15% 35%; /* lighter slate, distinct from the card track */
+
+  /* Ledger semantic — brighter on dark, on deep tinted beds. */
+  --positive: 142 71% 45%; /* #22c55e */
+  --positive-bg: 144 51% 10%; /* #0d2818 */
+  --negative: 0 91% 71%; /* #f87171 */
+  --negative-bg: 355 42% 12%; /* #2a1113 */
+  --warning: 38 92% 50%; /* #f59e0b */
+  --warning-bg: 41 59% 10%; /* #271e0a */
+  --pending: 43 96% 56%; /* #fbbf24 */
+  --pending-bg: 44 65% 10%; /* #2a2109 */
+  --info: 220 100% 74%; /* #7ba7ff */
+  --info-bg: 223 52% 13%; /* #101a33 */
+  /* --*-foreground and all --chart-* inherit from :root */
+}
+
+/* Utility names for the custom tokens (mirrors the
+   tailwind.config.ts `theme.extend.colors` mapping — text-positive, bg-hover,
+   border-selected, bg-highlight-hover, bg-switch-off, text-info, … keep
+   working). The standard shadcn tokens are already mapped by the framework's
+   agent-native.css @theme block. */
+@theme inline {
+  --font-sans:
+    "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-hover: hsl(var(--hover));
+  --color-selected: hsl(var(--selected));
+  --color-highlight: hsl(var(--highlight));
+  --color-highlight-hover: hsl(var(--highlight-hover));
+  --color-switch-off: hsl(var(--switch-off));
+
+  --color-surface-alt: hsl(var(--surface-alt));
+  --color-brand-accent: hsl(var(--brand-accent));
+
+  --color-positive: hsl(var(--positive));
+  --color-positive-foreground: hsl(var(--positive-foreground));
+  --color-positive-bg: hsl(var(--positive-bg));
+  --color-negative: hsl(var(--negative));
+  --color-negative-foreground: hsl(var(--negative-foreground));
+  --color-negative-bg: hsl(var(--negative-bg));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-warning-bg: hsl(var(--warning-bg));
+  --color-pending: hsl(var(--pending));
+  --color-pending-foreground: hsl(var(--pending-foreground));
+  --color-pending-bg: hsl(var(--pending-bg));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-info-bg: hsl(var(--info-bg));
+}
+
+/* Geometry and type scale — the two levers that carry the system's density.
+ *
+ * Radius: the source theme runs a 2/4/6/10px ladder and defaults surfaces to
+ * the 2px step. The framework derives `rounded-lg/md/sm` from `--radius`
+ * (lg = --radius, md = −2px, sm = −4px), so `--radius: 6px` reproduces the
+ * ladder exactly; `rounded-xl` isn't framework-mapped, so it's set here.
+ * Convention: in-page surfaces and controls `rounded-sm` (2px), badges
+ * `rounded-md` (4px), floating overlays `rounded-lg` (6px), pills `full`.
+ *
+ * Type: a compressed scale (11/13/14/16/20/24/30/36) — one step tighter than
+ * Tailwind's default at every stop. Framework chat CSS sets its own literal
+ * sizes and is unaffected. */
+@theme {
+  --radius-xl: 10px;
+
+  --text-xs: 11px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-lg: 16px;
+  --text-lg--line-height: 24px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 32px;
+  --text-3xl: 30px;
+  --text-3xl--line-height: 36px;
+  --text-4xl: 36px;
+  --text-4xl--line-height: 40px;
+}
+
+@layer base {
+  /* Respect the OS "reduce motion" setting: near-instant CSS animations and
+     transitions (skeleton pulse, dialog/sidebar transitions). Recharts paints
+     its own JS animations — those are gated separately via useReducedMotion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Standard shadcn token → Tailwind color mapping. The legacy app got this
+   from @agent-native/core's agent-native.css @theme block; this app owns
+   it directly. Must stay in sync with the :root/.dark variables above. */
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-chart-positive: hsl(var(--chart-positive));
+  --color-chart-positive-soft: hsl(var(--chart-positive-soft));
+  --color-chart-negative: hsl(var(--chart-negative));
+  --color-chart-negative-soft: hsl(var(--chart-negative-soft));
+  --color-chart-accent: hsl(var(--chart-accent));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* Chat markdown (assistant bubbles). Compact prose tuned to the 13px scale;
+   react-markdown output only — user bubbles stay literal text. */
+.chat-md > *:first-child { margin-top: 0; }
+.chat-md > *:last-child { margin-bottom: 0; }
+.chat-md p { margin: 0.4em 0; }
+.chat-md ul, .chat-md ol { margin: 0.4em 0; padding-left: 1.25em; }
+.chat-md ul { list-style: disc; }
+.chat-md ol { list-style: decimal; }
+.chat-md li { margin: 0.15em 0; }
+.chat-md li > p { margin: 0; }
+.chat-md strong { font-weight: 600; }
+.chat-md h1, .chat-md h2, .chat-md h3, .chat-md h4 {
+  margin: 0.7em 0 0.3em; font-weight: 600; font-size: 1em;
+}
+.chat-md h1 { font-size: 1.15em; }
+.chat-md h2 { font-size: 1.08em; }
+.chat-md code {
+  background: hsl(var(--muted)); border-radius: 4px; padding: 0.1em 0.35em;
+  font-size: 0.92em;
+}
+.chat-md pre {
+  background: hsl(var(--muted)); border-radius: 6px; padding: 0.6em 0.8em;
+  overflow-x: auto; margin: 0.5em 0;
+}
+.chat-md pre code { background: transparent; padding: 0; }
+.chat-md a { color: hsl(var(--info)); text-decoration: underline; }
+.chat-md blockquote {
+  border-left: 2px solid hsl(var(--border)); padding-left: 0.75em;
+  color: hsl(var(--muted-foreground)); margin: 0.4em 0;
+}
+/* Tables are a primary answer format for this copilot, so they read as a card
+   rather than a grid of boxes: hairline shell, one tinted header band, row
+   rules only (no vertical rules), and their own horizontal scroll so a wide
+   result never stretches the thread. Wrapper + column tagging come from
+   features/copilot/markdown-table.tsx. */
+.chat-md .chat-table {
+  margin: 0.65em 0;
+  overflow: auto;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+}
+.dark .chat-md .chat-table { box-shadow: none; }
+.chat-md table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.45;
+}
+/* Micro-caps header: states the column without competing with the data. */
+.chat-md thead th {
+  padding: 0.55em 0.85em;
+  background: hsl(var(--surface-alt));
+  border-bottom: 1px solid hsl(var(--border));
+  text-align: left;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+/* One line per row, like the app's own tables. Wrapping instead would let a
+   description column collapse to its longest word in a 400px dock and stack
+   every row four lines high; scrolling sideways is the cheaper trade. */
+.chat-md tbody td {
+  padding: 0.5em 0.85em;
+  border-top: 1px solid hsl(var(--border) / 0.7);
+  white-space: nowrap;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-md tbody tr:first-child td { border-top: 0; }
+.chat-md tbody tr:hover { background: hsl(var(--hover) / 0.55); }
+/* Numeric columns: right-aligned lining figures so digits stack by place value.
+   Tagged per column because CSS can't select "the third column" dynamically;
+   an explicit GFM alignment arrives as an inline style and outranks this. */
+.chat-md .chat-t-num-1 :is(th, td):nth-child(1),
+.chat-md .chat-t-num-2 :is(th, td):nth-child(2),
+.chat-md .chat-t-num-3 :is(th, td):nth-child(3),
+.chat-md .chat-t-num-4 :is(th, td):nth-child(4),
+.chat-md .chat-t-num-5 :is(th, td):nth-child(5),
+.chat-md .chat-t-num-6 :is(th, td):nth-child(6),
+.chat-md .chat-t-num-7 :is(th, td):nth-child(7),
+.chat-md .chat-t-num-8 :is(th, td):nth-child(8),
+.chat-md .chat-t-num-9 :is(th, td):nth-child(9),
+.chat-md .chat-t-num-10 :is(th, td):nth-child(10) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.chat-md hr { border: 0; border-top: 1px solid hsl(var(--border)); margin: 0.7em 0; }

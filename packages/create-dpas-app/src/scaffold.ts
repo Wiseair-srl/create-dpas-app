@@ -16,13 +16,14 @@ export class ScaffoldError extends Error {}
 
 const COPY_EXCLUDES = new Set([
   "node_modules",
-  ".next",
+  "dist",
+  "build",
   ".data",
   "test-results",
   "playwright-report",
   "coverage",
   ".env",
-  "next-env.d.ts",
+  ".agent-surface/cache",
   "tsconfig.tsbuildinfo",
 ]);
 
@@ -111,8 +112,12 @@ function replaceTokens(file: string, projectName: string) {
 
 /**
  * .env.example is the committed reference. The generated .env selects the
- * chosen provider but NEVER contains a secret — keys stay commented with a
- * pointer to where they go.
+ * chosen provider but NEVER contains a secret.
+ *
+ * The app decides which provider to use from WHICH KEY IS SET — there is no
+ * separate provider switch to keep in agreement with it. So choosing a provider
+ * here means uncommenting the line its key goes on, leaving the value empty and
+ * the developer one paste from a working copilot.
  */
 function writeEnvFiles(appDir: string, modelProvider: ModelProvider) {
   const examplePath = path.join(appDir, ".env.example");
@@ -120,6 +125,10 @@ function writeEnvFiles(appDir: string, modelProvider: ModelProvider) {
     throw new ScaffoldError("Template is missing .env.example — refusing to continue.");
   }
   const example = readFileSync(examplePath, "utf8");
-  const env = example.replace(/^MODEL_PROVIDER=.*$/m, `MODEL_PROVIDER=${modelProvider}`);
+  const key = modelProvider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENROUTER_API_KEY";
+  const env =
+    modelProvider === "none"
+      ? example
+      : example.replace(new RegExp(`^#\\s*${key}=.*$`, "m"), `${key}=`);
   writeFileSync(path.join(appDir, ".env"), env);
 }
