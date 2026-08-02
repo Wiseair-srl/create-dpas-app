@@ -49,14 +49,14 @@ importers:
   templates/default:
     dependencies:
       '@agent-surface/core':
-        specifier: ^0.20.0
-        version: 0.20.0
+        specifier: ^0.22.0
+        version: 0.22.0
       '@agent-surface/orpc':
-        specifier: ^0.20.0
-        version: 0.20.0(@agent-surface/react@0.20.0(react@19.2.8))(react@19.2.8)
+        specifier: ^0.22.0
+        version: 0.22.0(@agent-surface/react@0.22.0(react@19.2.8))(react@19.2.8)
       '@agent-surface/react':
-        specifier: ^0.20.0
-        version: 0.20.0(react@19.2.8)
+        specifier: ^0.22.0
+        version: 0.22.0(react@19.2.8)
       '@assistant-ui/react':
         specifier: ^0.15.1
         version: 0.15.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -76,14 +76,14 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
       '@orpc-agent/ai-sdk':
-        specifier: ^2.0.0
-        version: 2.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)
+        specifier: ^2.0.2
+        version: 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)
       '@orpc-agent/core':
-        specifier: ^2.0.1
-        version: 2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+        specifier: ^2.0.2
+        version: 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@orpc-agent/mcp':
-        specifier: ^2.0.0
-        version: 2.0.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+        specifier: ^2.0.2
+        version: 2.0.2(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@orpc/client':
         specifier: ^1.14.13
         version: 1.14.13(@opentelemetry/api@1.9.0)
@@ -185,14 +185,14 @@ importers:
         version: 5.0.14(@types/react@19.2.17)(react@19.2.8)
     devDependencies:
       '@agent-surface/cli':
-        specifier: ^0.20.0
-        version: 0.20.0(@types/node@26.1.2)(@types/react@19.2.17)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
+        specifier: ^0.22.0
+        version: 0.22.0(@types/node@26.1.2)(@types/react@19.2.17)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
       '@agent-surface/compiler':
-        specifier: ^0.20.0
-        version: 0.20.0(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
+        specifier: ^0.22.0
+        version: 0.22.0(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
       '@agent-surface/testing':
-        specifier: ^0.20.0
-        version: 0.20.0(@agent-surface/react@0.20.0(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
+        specifier: ^0.22.0
+        version: 0.22.0(@agent-surface/react@0.22.0(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
       '@ai-sdk/provider':
         specifier: ^2.0.3
         version: 2.0.3
@@ -203,11 +203,11 @@ importers:
         specifier: ^9.39.5
         version: 9.39.5
       '@orpc-agent/cli':
-        specifier: ^2.0.0
-        version: 2.0.0(@orpc-agent/core@2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)
+        specifier: ^2.1.0
+        version: 2.1.0(@orpc-agent/core@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)
       '@orpc-agent/testing':
-        specifier: ^2.0.0
-        version: 2.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+        specifier: ^2.0.2
+        version: 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@playwright/test':
         specifier: ^1.62.0
         version: 1.62.0
@@ -289,21 +289,21 @@ packages:
       express:
         optional: true
 
-  '@agent-surface/cli@0.20.0':
-    resolution: {integrity: sha512-n+loRaZJ6Sx4EnjOlcuabVzFZXcq8AnfTPn7Mtd7fKmvAXMl4B4jsnQvAX9HJlhUJUiao81zT0wUDNS4EflOLQ==}
+  '@agent-surface/cli@0.22.0':
+    resolution: {integrity: sha512-QX0qdmrI+Nt+qPOVhEqx5uu/58WVhLUOSjSpO2mSFq91uNJGd2HXGZE3bnHvhogU5QhM4RYTeswwZCEOIN0+6g==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
-  '@agent-surface/compiler@0.20.0':
-    resolution: {integrity: sha512-cDbwRSsY3d0ghgEF77ZQBskJC9WcxN54gRJChK6Ok3s16ElrA/ON9iNlSuKuwpHDEmjFsMU/+uaoPpL76m8/Hg==}
+  '@agent-surface/compiler@0.22.0':
+    resolution: {integrity: sha512-PAOjMWrT7HxSCKyWUQ1gbHl6NE8qVAv3xzoOhAC3vk+kfWqjTk36cm/uSnfSzC4IbMAr4zynF4DjYF5GWC4lrw==}
     engines: {node: '>=20.19.0'}
 
-  '@agent-surface/core@0.20.0':
-    resolution: {integrity: sha512-RHZw7nIr4A2IsykBLfUO7s8Y0fNxkKwL+E3qwSybzFZcC4JQAbIyiufgnOg5fZN5Mbw0pqDU3hqpZHjrXwh5kw==}
+  '@agent-surface/core@0.22.0':
+    resolution: {integrity: sha512-i8o759UbCzDRPBdbYv5IphBr5NdM3534DvXuCrm/84hPd0B36TW7G6pPg+Bx62YUXE1LpoXmF/g4gakaJFU71Q==}
     engines: {node: '>=20.19.0'}
 
-  '@agent-surface/orpc@0.20.0':
-    resolution: {integrity: sha512-AW1wA7LYHjBUl6JMVtqEfA+AXN8Unaxws9JNla+W4bB4BnyG2spU65v5CcKFcceveMExNnh+Xqw72SxLT+o52A==}
+  '@agent-surface/orpc@0.22.0':
+    resolution: {integrity: sha512-YgCMNk9xec+y+uzjAacvNS42yqMy6PadhNislLEak7UzsWtIwc6WTmmY+aQr+rVAh3jYh51BPI4ZfHGCvysCRg==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@agent-surface/react': '>=0.1.0'
@@ -314,14 +314,14 @@ packages:
       react:
         optional: true
 
-  '@agent-surface/react@0.20.0':
-    resolution: {integrity: sha512-aHy9lTPc3oKuP1a26ZSJxGUb+a/EBt+8+xEOvwXpD5rFaFYRSGiSCHShGP2kLghVhGHitduYT5h8kn5/+cowGw==}
+  '@agent-surface/react@0.22.0':
+    resolution: {integrity: sha512-08nF10nTuZhDp6w2Xum7o4iGfwPymszRtdP37u3vw90uvfnmjTMfgRUqtcfsixBO9a3Jj6ukvSPomwt0WbJpmA==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       react: '>=18.2'
 
-  '@agent-surface/testing@0.20.0':
-    resolution: {integrity: sha512-AfCqss/p6j/NnMXS2ADLuk+llt7mobWbVhVVNhpmfzf75Dwc4mqKsyy/R/JrkaPU+La0krbhU1C3Au/2LjI2yQ==}
+  '@agent-surface/testing@0.22.0':
+    resolution: {integrity: sha512-bTCs6Xkcxj/fP9JXmc97YxYwp6o+58U7t7LNe5p1gliL8A2lEIa45qasSAA8Q63MUuFUI1ElYtn7AC5hlP6UhQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@agent-surface/react': '>=0.1.0'
@@ -1242,21 +1242,21 @@ packages:
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
 
-  '@orpc-agent/ai-sdk@2.0.0':
-    resolution: {integrity: sha512-2dKT8+TV6Z5zAo5KMGRUUPXgAYtW+7z5P+3tIDBTb9MfRegf8RO9MIRBrUCWUVwkHQexq2F0JIGnXK9gpI/+YA==}
+  '@orpc-agent/ai-sdk@2.0.2':
+    resolution: {integrity: sha512-olavUDClYy7wq5Sfh9btbRX4o75v1E8Q1+rQwiVhjBF5Zd839naHsT0w5zpANQ7PX2aTKrBscMPjKPfw7L0NgA==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       ai: ^5.0.0 || ^6.0.0
 
-  '@orpc-agent/cli@2.0.0':
-    resolution: {integrity: sha512-ufQ93Ynh2728IPcNU8fF54bAZW7PqMHz7pTKBEjCwp43KdyO61wPodFGMc/UCQ12LQvwYFoN126lqRmo1nGkjw==}
+  '@orpc-agent/cli@2.1.0':
+    resolution: {integrity: sha512-Ir6KuxVKEzcf7lhnBO0GuVuFO56o3U/CG222d7drRnGjumfX9wqPFcVf46b58IxjUc4EtzEroL7C+kxChSPIwg==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
-      '@orpc-agent/core': ^2.0.0
+      '@orpc-agent/core': ^2.0.2
 
-  '@orpc-agent/core@2.0.1':
-    resolution: {integrity: sha512-3tVnHkzBf8Xw/OomsdI8u1Jxgsj7NOHnDRcN3IY/JX919X5utV1vSFVewnn69rTbwZA/cu3PvtiqVhNm5OBxRQ==}
+  '@orpc-agent/core@2.0.2':
+    resolution: {integrity: sha512-OBWQsVFEUlIRfc3CPJu1JNcq5Ed6QZPVkJFKMSliZCyK+hnEp7861kcdweOk/E6SpYR9WDFwGKi9xHeIh4YrYQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@orpc/server': ^1.14.10
@@ -1265,14 +1265,14 @@ packages:
       zod:
         optional: true
 
-  '@orpc-agent/mcp@2.0.0':
-    resolution: {integrity: sha512-eyGemBvM4Bv39sCeOoKoxq2rvqZFF2b5lS2oIaSxDKepDdbgR7c2m5hjbtF3/Q/fgkLaAbnk/AAeLZGued7OCA==}
+  '@orpc-agent/mcp@2.0.2':
+    resolution: {integrity: sha512-a/Oa1L5QXqMfLo+tKbcJWOn5dFHAAVm3Z7qTlheVrmrIythS48FpGK3rIkuV884wbLrUrAbO+wXq+C3wvucfRw==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.17.0
 
-  '@orpc-agent/testing@2.0.0':
-    resolution: {integrity: sha512-mmnnnoNr2McATqUNj2TuZE3nRgfd8Acntwwk5JnRNEf0rpE/ngjTBY+b6+8W/2XcUBH4bOs2LPnNy/N/utCQAA==}
+  '@orpc-agent/testing@2.0.2':
+    resolution: {integrity: sha512-X45udRrWY1ZhuXb9PJnTr/XhAdbuJmlfR0x2yK28q48RrCU+qL4WKNO0ldU1/7g2t2uUKv1DP6YGGEkNNZZqiQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@orpc/server': ^1.14.10
@@ -5400,10 +5400,10 @@ snapshots:
     optionalDependencies:
       express: 5.2.1
 
-  '@agent-surface/cli@0.20.0(@types/node@26.1.2)(@types/react@19.2.17)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)':
+  '@agent-surface/cli@0.22.0(@types/node@26.1.2)(@types/react@19.2.17)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)':
     dependencies:
-      '@agent-surface/compiler': 0.20.0(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
-      '@agent-surface/core': 0.20.0
+      '@agent-surface/compiler': 0.22.0(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
+      '@agent-surface/core': 0.22.0
       ink: 6.8.0(@types/react@19.2.17)(react@19.2.8)
       react: 19.2.8
       vite: 7.3.6(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
@@ -5424,9 +5424,9 @@ snapshots:
       - utf-8-validate
       - yaml
 
-  '@agent-surface/compiler@0.20.0(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)':
+  '@agent-surface/compiler@0.22.0(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)':
     dependencies:
-      '@agent-surface/core': 0.20.0
+      '@agent-surface/core': 0.22.0
       typescript: 5.9.3
       vite: 7.3.6(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.1)
     transitivePeerDependencies:
@@ -5442,25 +5442,25 @@ snapshots:
       - tsx
       - yaml
 
-  '@agent-surface/core@0.20.0': {}
+  '@agent-surface/core@0.22.0': {}
 
-  '@agent-surface/orpc@0.20.0(@agent-surface/react@0.20.0(react@19.2.8))(react@19.2.8)':
+  '@agent-surface/orpc@0.22.0(@agent-surface/react@0.22.0(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@agent-surface/core': 0.20.0
+      '@agent-surface/core': 0.22.0
     optionalDependencies:
-      '@agent-surface/react': 0.20.0(react@19.2.8)
+      '@agent-surface/react': 0.22.0(react@19.2.8)
       react: 19.2.8
 
-  '@agent-surface/react@0.20.0(react@19.2.8)':
+  '@agent-surface/react@0.22.0(react@19.2.8)':
     dependencies:
-      '@agent-surface/core': 0.20.0
+      '@agent-surface/core': 0.22.0
       react: 19.2.8
 
-  '@agent-surface/testing@0.20.0(@agent-surface/react@0.20.0(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)':
+  '@agent-surface/testing@0.22.0(@agent-surface/react@0.22.0(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@agent-surface/core': 0.20.0
+      '@agent-surface/core': 0.22.0
     optionalDependencies:
-      '@agent-surface/react': 0.20.0(react@19.2.8)
+      '@agent-surface/react': 0.22.0(react@19.2.8)
       '@testing-library/react': 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react: 19.2.8
 
@@ -6463,17 +6463,17 @@ snapshots:
 
   '@opentelemetry/api@1.9.0': {}
 
-  '@orpc-agent/ai-sdk@2.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)':
+  '@orpc-agent/ai-sdk@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)':
     dependencies:
-      '@orpc-agent/core': 2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       ai: 5.0.221(zod@4.4.3)
     transitivePeerDependencies:
       - '@orpc/server'
       - zod
 
-  '@orpc-agent/cli@2.0.0(@orpc-agent/core@2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)':
+  '@orpc-agent/cli@2.1.0(@orpc-agent/core@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)':
     dependencies:
-      '@orpc-agent/core': 2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
     optionalDependencies:
       ink: 7.1.1(@types/react@19.2.17)(react@19.2.8)
       react: 19.2.8
@@ -6483,24 +6483,24 @@ snapshots:
       - react-devtools-core
       - utf-8-validate
 
-  '@orpc-agent/core@2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
+  '@orpc-agent/core@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
     dependencies:
       '@orpc/server': 1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1)
       '@standard-schema/spec': 1.1.0
     optionalDependencies:
       zod: 4.4.3
 
-  '@orpc-agent/mcp@2.0.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
+  '@orpc-agent/mcp@2.0.2(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      '@orpc-agent/core': 2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
     transitivePeerDependencies:
       - '@orpc/server'
       - zod
 
-  '@orpc-agent/testing@2.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
+  '@orpc-agent/testing@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
     dependencies:
-      '@orpc-agent/core': 2.0.1(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@orpc/server': 1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1)
     transitivePeerDependencies:
       - zod
