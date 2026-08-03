@@ -17,14 +17,17 @@ import { getSurfaceRegistry, setSurfaceRoute, setSurfaceSession, type SurfaceUse
  *    same data layer as every human path; it has no privileged channel into
  *    the UI.
  *
- *    HALF the story, and the half is the point: this subscription sees only
- *    what the agent runs in the BROWSER. Most domain capabilities are composed
- *    server-side and execute inside the model loop, where no surface event is
- *    ever emitted — those reconcile from the stream instead, in
- *    `agent/host/transport-client.ts` (`onDomainMutation`). One convention,
- *    two triggers, because there are two execution planes. Reading either one
- *    as complete is exactly the bug that made agent writes update the screen
- *    sometimes.
+ *    A THIRD of the story, and the fraction is the point: this subscription
+ *    sees only what the agent runs in the BROWSER. Most domain capabilities
+ *    are composed server-side and execute inside the model loop, where no
+ *    surface event is ever emitted — those reconcile from the stream instead,
+ *    in `agent/host/transport-client.ts` (`onDomainMutation`). And a GATED
+ *    write executes in neither moment: the stream sees only its suspension,
+ *    and the write itself happens inside the approval decision, which
+ *    reconciles in `features/copilot/tool-ui.tsx` (`decide`). One convention,
+ *    three triggers, because there are three moments a domain write can land.
+ *    Reading any one of them as complete is exactly the bug that made agent
+ *    writes update the screen sometimes.
  * 2. Route + session — kept in refs the registry reads lazily at snapshot and
  *    invoke time.
  *
@@ -107,8 +110,9 @@ function SurfaceWiring({ user }: { user: SurfaceUser | null }) {
         // Blanket invalidation is the app-wide convention — do not narrow it
         // here, or the agent and the buttons would refresh the page
         // differently, and the difference would be a bug nobody can see.
-        // The server plane runs the identical line from the stream consumer;
-        // narrowing one of the two would also make them disagree.
+        // The server plane runs the identical line from the stream consumer,
+        // and the approval decision from tool-ui.tsx; narrowing one of the
+        // three would also make them disagree.
         if (ok && typeof capabilityId === "string" && capabilityId.startsWith("domain:")) {
           void queryClient.invalidateQueries();
         }

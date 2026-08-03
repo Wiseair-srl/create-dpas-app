@@ -96,10 +96,11 @@ export function useDpasAssistantRuntime(options: { liveEnabled: boolean }) {
   /**
    * The reconciliation the turn calls after a server-plane write. One line, and
    * deliberately the SAME line the invoice mutations already run on settle
-   * (`features/invoices/hooks.ts`) and the surface subscription runs after a
-   * browser-plane capability (`agent/surface/wiring.tsx`): the agent writes
-   * through the same data layer as every human path and gets no narrower
-   * refresh than a button does.
+   * (`features/invoices/hooks.ts`), the surface subscription runs after a
+   * browser-plane capability (`agent/surface/wiring.tsx`), and the approval
+   * decision runs after a gated write executes (`tool-ui.tsx`): the agent
+   * writes through the same data layer as every human path and gets no
+   * narrower refresh than a button does.
    */
   const reconcile = useCallback(() => {
     void queryClient.invalidateQueries();

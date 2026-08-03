@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ToolCallMessagePartComponent } from "@assistant-ui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ShieldAlert } from "lucide-react";
 
 import { CHAT_RENDERERS } from "@/chat-renderers";
@@ -305,6 +306,7 @@ function ApprovalGate({
   approval: ApprovalCardData | null;
 }) {
   const { threadId, onDecided } = useContext(CopilotContext);
+  const queryClient = useQueryClient();
   const [deciding, setDeciding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -312,14 +314,27 @@ function ApprovalGate({
     setDeciding(true);
     setError(null);
     try {
-      await fetch(`/api/approvals/${approvalId}`, {
+      const { resolution } = (await fetch(`/api/approvals/${approvalId}`, {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ approved, threadId }),
-      }).then(json);
+      }).then(json)) as { resolution?: { status?: string } };
       // The record just changed; the reload below must not read a stale copy.
       settled.delete(approvalId);
+      // The THIRD trigger of the app's one reconciliation convention (the
+      // other two: agent/surface/wiring.tsx for browser-plane capabilities,
+      // agent/host/transport-client.ts for server-plane results). The gated
+      // write just executed inside THIS request — the model-loop stream that
+      // asked for it closed steps ago, and no surface event fires on the
+      // server — so if this line does not refetch, nothing ever tells the tab
+      // the database moved. Completed only: a denied or failed resume wrote
+      // nothing, and refetching would dress the refusal up as an update. Same
+      // blanket line every human mutation runs; the decision gets no narrower
+      // refresh than a button.
+      if (resolution?.status === "completed") {
+        void queryClient.invalidateQueries();
+      }
       onDecided();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

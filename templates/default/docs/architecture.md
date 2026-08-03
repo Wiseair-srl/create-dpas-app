@@ -108,14 +108,19 @@ would show a card stuck on "running".
 
 - **Application state** is React Query over `/rpc`. After a domain mutation the
   cache is invalidated — the same path a button uses. The agent has no
-  privileged channel. One convention, **two triggers, because there are two
-  execution planes**: a capability the agent runs in the browser settles on the
-  surface and `app/agent/surface/wiring.tsx` invalidates; a capability that runs
-  inside the model loop on the server never reaches that subscription, so the
-  stream consumer (`app/agent/host/transport-client.ts`) invalidates instead,
-  on any successful `tool-result` whose declared `sideEffect` is not a read.
-  Neither trigger covers the other plane, and reading either as complete is what
-  makes agent writes refresh the screen only sometimes.
+  privileged channel. One convention, **three triggers, because there are three
+  moments a domain write can land**: a capability the agent runs in the browser
+  settles on the surface and `app/agent/surface/wiring.tsx` invalidates; a
+  capability that runs inside the model loop on the server never reaches that
+  subscription, so the stream consumer (`app/agent/host/transport-client.ts`)
+  invalidates instead, on any successful `tool-result` whose declared
+  `sideEffect` is not a read — unless that result is an approval suspension,
+  which wrote nothing yet; a **gated** write then executes inside the approval
+  decision (`POST /api/approvals/:id`), when no stream is open at all, so the
+  decision path invalidates on a completed resume
+  (`app/features/copilot/tool-ui.tsx`). No trigger covers another's moment, and
+  reading any one as complete is what makes agent writes refresh the screen
+  only sometimes.
 - **Identity** is re-derived server-side on every request (`server/auth.ts`).
   The browser reads it to shape UI; it never asserts it. Correlation metadata
   the agent path attaches is recorded for audit and explicitly untrusted.

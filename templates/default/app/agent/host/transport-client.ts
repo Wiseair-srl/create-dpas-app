@@ -8,6 +8,7 @@ import { createLoopGuard, type ToolOutcome } from "./loop-guard";
 import {
   CATALOG_LIMITS,
   catalogTooLargeMessage,
+  awaitingApproval,
   createFrameDecoder,
   mutatesData,
   PROTOCOL_VERSION,
@@ -65,12 +66,17 @@ export interface TurnEvents {
    * A server-plane write just SUCCEEDED, so anything the tab is displaying may
    * now be stale.
    *
-   * This is the second trigger for the app's one reconciliation convention.
-   * The first is the surface subscription in `app/agent/surface/wiring.tsx`,
-   * which covers capabilities the agent runs in the BROWSER; those never reach
-   * this callback, and the calls that reach this callback never reach that
-   * subscription. Neither covers the other plane — that split is the whole
-   * reason both exist.
+   * This is the second of THREE triggers for the app's one reconciliation
+   * convention. The first is the surface subscription in
+   * `app/agent/surface/wiring.tsx`, which covers capabilities the agent runs
+   * in the BROWSER; those never reach this callback, and the calls that reach
+   * this callback never reach that subscription. The third is the approval
+   * decision (`features/copilot/tool-ui.tsx`): a GATED write executes in
+   * neither of the first two moments — its result here is a suspension that
+   * wrote nothing (`awaitingApproval`), and the write itself happens later,
+   * inside `POST /api/approvals/:id`, when no stream is open at all. No
+   * trigger covers another's moment — that split is the whole reason all
+   * three exist.
    *
    * Fires once per successful write, not once per turn: a turn that writes
    * three times and keeps reasoning should update the screen as it goes, and
@@ -517,14 +523,17 @@ async function consumeStepStream(
         // tool": a name outside it is a frontend declaration or one the model
         // invented, and neither wrote anything here. Successes only —
         // refetching after a REFUSED write would dress a failure up as an
-        // update, which is worse than the stale screen it replaces.
+        // update, which is worse than the stale screen it replaces. And
+        // suspensions excluded: an approval-required envelope is `ok` on the
+        // wire but wrote nothing yet — the write lands at the approval
+        // decision, which reconciles itself (the convention's third trigger).
         //
         // `has` and `get` are separate because the field is optional: an
         // absent entry means "not a server tool", while an entry holding
         // `undefined` means "server tool whose effect this server did not
         // declare" — which `mutatesData` counts as a write.
         if (frame.ok && sideEffectByWire.has(frame.wireName)) {
-          if (mutatesData(sideEffectByWire.get(frame.wireName))) {
+          if (mutatesData(sideEffectByWire.get(frame.wireName)) && !awaitingApproval(frame.result)) {
             inspector.push({
               lane: "host",
               type: "reconcile",

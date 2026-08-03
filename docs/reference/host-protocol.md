@@ -378,6 +378,17 @@ that is both `ok` and not a declared read. Anything that is not `"read"` or
 absent altogether, counts as a write: one refetch too many costs a request, one
 missed leaves the user reading numbers that have already changed.
 
+One `ok` result is exempt: the approval suspension. A gated capability's first
+result is `{ status: "approval-required", … }` — the pipeline parked the call in
+an approval record and wrote **nothing**, so the browser does not reconcile on
+it (`awaitingApproval` in `protocol.ts`, matched exactly so an unrecognised
+envelope still errs toward refetching). The write it defers executes later,
+inside `POST /api/approvals/:id`, when no stream is open anywhere — so the
+decision response carries the resolution and the browser invalidates there
+instead, on `resolution.status === "completed"`. Same convention, third
+trigger; without it a gated write refetched at the suspension, when nothing had
+changed, and stayed silent at the execution, when everything had.
+
 The `inspector` frames are filtered by actor. The audit log is process-wide and
 concurrent users write to it simultaneously, so an entry is forwarded only when
 it is positively attributable to this session; one carrying no actor is dropped

@@ -108,7 +108,7 @@ export async function startLiveTurn(text: string, reconcile: Reconcile): Promise
         },
         // The write happened on the server, inside the model loop; the tab was
         // never told. See `TurnEvents.onDomainMutation` for why this is one of
-        // TWO triggers for a single convention, and why neither is redundant.
+        // THREE triggers for a single convention, and why none is redundant.
         //
         // Not awaited on purpose: invalidation is asynchronous and the turn has
         // no reason to wait for a refetch before continuing.

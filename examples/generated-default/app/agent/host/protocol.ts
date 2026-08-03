@@ -249,6 +249,33 @@ export function mutatesData(sideEffect: string | undefined): boolean {
 }
 
 /**
+ * Did this successful call actually run, or did it stop at the approval gate?
+ *
+ * A gated capability's FIRST result is `{ status: "approval-required", … }` —
+ * the governed envelope's way of saying the pipeline suspended the call into
+ * an approval record and wrote NOTHING. It is still `ok` on the wire (the
+ * call did not fail; it is waiting), so without this check the reconciler
+ * refetches for a write that has not happened — and stays silent later, when
+ * the approval decision executes the write inside `POST /api/approvals/:id`,
+ * where no stream is open. Exactly backwards. The decision path reconciles
+ * itself (tool-ui.tsx `decide`), which is the third trigger of the app's one
+ * reconciliation convention.
+ *
+ * Matched EXACTLY, the opposite direction from `mutatesData`'s exclusion, and
+ * for the same underlying reason: the doubt must fall toward refetching. An
+ * envelope this build cannot positively recognise as a suspension reconciles
+ * anyway — one refetch too many costs a request; reading an unknown shape as
+ * "nothing happened" is how a landed write stays on screen stale.
+ */
+export function awaitingApproval(result: unknown): boolean {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    (result as { status?: unknown }).status === "approval-required"
+  );
+}
+
+/**
  * What one step-request cost, in tokens.
  *
  * A step-request is not a model call: the runtime may take several model steps
