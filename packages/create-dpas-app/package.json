@@ -1,6 +1,6 @@
 {
   "name": "create-dpas-app",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Scaffold a Dual-Plane Agent Stack (DPAS) application: Agent Surface + oRPC Agent + Mastra + assistant-ui.",
   "type": "module",
   "license": "MIT",
