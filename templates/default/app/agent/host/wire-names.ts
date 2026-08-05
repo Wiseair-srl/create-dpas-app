@@ -29,6 +29,20 @@ export function domainToolName(capabilityId: string): string {
   return encodeWireName(`domain:${capabilityId}`);
 }
 
+/**
+ * Canonical id → the key a chat renderer is registered under
+ * (`app/chat-renderers.tsx`). The pill shows the canonical id whole, because
+ * which plane a call ran on is worth seeing; the renderers are keyed by BARE
+ * capability id — the registry key, which is also the only plane that has any,
+ * and the id the approval receipt carries.
+ *
+ * The two must agree or the native card never draws and nothing errs, so
+ * chat-renderers.test.ts pins the round trip.
+ */
+export function rendererKey(canonicalId: string): string {
+  return canonicalId.startsWith("domain:") ? canonicalId.slice("domain:".length) : canonicalId;
+}
+
 /** The three generic tools meta mode projects instead of one per capability. */
 export const META_TOOL_NAMES = new Set(["surface_discover", "surface_read", "surface_act"]);
 

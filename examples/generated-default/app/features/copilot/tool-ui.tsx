@@ -3,6 +3,7 @@ import type { ToolCallMessagePartComponent } from "@assistant-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ShieldAlert } from "lucide-react";
 
+import { rendererKey } from "@/agent/host/wire-names";
 import { CHAT_RENDERERS } from "@/chat-renderers";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/format";
@@ -111,16 +112,6 @@ function useApprovalRecord(approvalId: string | null): ApprovalCardData | null {
 
   if (!approvalId) return null;
   return polled ?? settled.get(approvalId) ?? fetched;
-}
-
-/**
- * `toolName` is the CANONICAL id under the host protocol — `domain:sync-fic`,
- * `view:cashflow.transactions.setFilters`. The pill shows it whole, because
- * which plane a call ran on is worth seeing; the result renderers are keyed by
- * bare capability id, which is also the only plane that has any.
- */
-function rendererKey(toolName: string): string {
-  return toolName.startsWith("domain:") ? toolName.slice("domain:".length) : toolName;
 }
 
 /**

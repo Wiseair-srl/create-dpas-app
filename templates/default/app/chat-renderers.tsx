@@ -80,14 +80,14 @@ function SummaryTiles({ summary }: { summary: ReceivablesSummary }) {
 }
 
 export const CHAT_RENDERERS: Record<string, (data: unknown) => ReactNode> = {
-  "domain:collections-aging": (data) =>
+  "collections-aging": (data) =>
     Array.isArray(data) ? (
       <ChatCard title="Receivables ageing">
         <AgingChart buckets={data as AgingBucket[]} />
       </ChatCard>
     ) : null,
 
-  "domain:receivables-summary": (data) =>
+  "receivables-summary": (data) =>
     data && typeof data === "object" ? (
       <ChatCard title="Receivables">
         <SummaryTiles summary={data as ReceivablesSummary} />
