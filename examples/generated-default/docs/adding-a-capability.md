@@ -40,6 +40,35 @@ a button has already expressed intent.
 
 Test it in `capabilities/governance.test.ts` — deterministic, no model, no HTTP.
 
+### A native chat renderer
+
+Optional, for reporting capabilities. `app/chat-renderers.tsx` keeps one
+renderer per capability id. When a call comes back `ok` the thread draws that
+renderer's output under the tool pill (`features/copilot/tool-ui.tsx`), and
+the approval receipt reuses the map for the output of a gated run
+(`approval-receipt.tsx`). The key is the bare capability id — the registry
+key, not the `domain:`-prefixed name the pill shows — and the input is the
+governed envelope's `data`, already unwrapped:
+
+```tsx
+// app/chat-renderers.tsx
+export const CHAT_RENDERERS: Record<string, (data: unknown) => ReactNode> = {
+  "collections-aging": (data) =>
+    Array.isArray(data) ? (
+      <ChatCard title="Receivables ageing">
+        <AgingChart buckets={data as AgingBucket[]} />
+      </ChatCard>
+    ) : null,
+};
+```
+
+Return `null` when the data is not the shape you expected. A missing entry —
+or that `null` — is not an error: the thread falls back to the collapsible
+payload viewer (`features/copilot/payload.tsx`), the right default, because a
+renderer that guesses at an unknown shape is worse than an honest `{ … }`.
+Render with the same components the pages use, so the assistant's version of
+a number and the screen's version cannot disagree.
+
 ## A view capability
 
 Two steps, in this order. **Declare** it in `app/agent/surface/contracts.ts`:
