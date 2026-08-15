@@ -4,7 +4,7 @@ layout: home
 hero:
   name: create-dpas-app
   text: One capability layer for your UI, your copilot and MCP
-  tagline: One command scaffolds a Dual-Plane Agent Stack application — one typed registry instead of a product and a parallel agent API, a catalog the model discovers deterministically per request, server-side authorization and approvals on what carries consequence, and a test suite that never needs a model.
+  tagline: One command scaffolds a Dual-Plane Agent Stack application — one typed registry instead of a product and a parallel agent API, governed on the server and testable without a model.
   image:
     src: /logo.svg
     alt: create-dpas-app
