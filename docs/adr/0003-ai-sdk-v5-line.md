@@ -1,4 +1,4 @@
-# ADR-0003 — Pin the AI SDK to the v5 line
+# ADR-0003 · Pin the AI SDK to the v5 line
 
 **Status:** accepted · 2026-07-30
 

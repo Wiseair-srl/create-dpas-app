@@ -1,4 +1,4 @@
-# ADR-0010 — Consequence is gated by server approval, not frontend confirmation
+# ADR-0010 · Consequence is gated by server approval, not frontend confirmation
 
 **Status:** accepted · 2026-08-02
 
@@ -14,12 +14,12 @@ Both stop a model from acting alone. They are not interchangeable, and the
 template previously used the first for everything.
 
 The problem is where each one lives. A contextual binding executes in the
-browser and reaches the server over the app's ordinary `/rpc` client — as
+browser and reaches the server over the app's ordinary `/rpc` client, as
 `surface: "direct"`. That is correct: it *is* the user's own session making the
 call. But `gateModelWrites` deliberately lets `direct` through ungated, because
 a person clicking a button has already expressed intent. So binding a gated
 capability silently trades a persisted, server-side approval record for a
-browser-side dialog — weaker authority, on exactly the operations that least
+browser-side dialog: weaker authority, on exactly the operations that least
 want it, with nothing in the type system to notice.
 
 ## Decision
@@ -38,7 +38,7 @@ passes ungated. `issue-invoice` and `delete-invoice` are the examples.
 
 Gated capabilities are **deliberately absent** from
 `app/agent/domain/manifest.ts`, which is the exposure ceiling for the
-presentation plane. A component therefore cannot bind one even by mistake — the
+presentation plane. A component therefore cannot bind one even by mistake: the
 manifest is the enforcement, and the comment in that file is the explanation.
 
 ## Consequences
@@ -52,4 +52,4 @@ manifest is the enforcement, and the comment in that file is the explanation.
 - A decided approval has to re-enter the conversation, or the next turn reasons
   over a history in which the model asked for something and nothing answered.
   `server/approval-receipt.ts` writes that message, from the record and the
-  result — approving something that then failed says so.
+  result, so approving something that then failed says so.

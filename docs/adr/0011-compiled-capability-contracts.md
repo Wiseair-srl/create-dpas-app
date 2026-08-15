@@ -1,4 +1,4 @@
-# ADR-0011 — The agent surface is compiled from source, not discovered at runtime
+# ADR-0011 · The agent surface is compiled from source, not discovered at runtime
 
 **Status:** accepted · 2026-08-02
 
@@ -13,9 +13,9 @@ spread `readFilters` / `setFilters` / `clearFilters` into the registration only
 when a screen supplied a `filters` object.
 
 Reviewing that surface therefore meant reproducing it. The template shipped an
-`agent-surface.config.tsx` of ~250 lines — a jsdom harness with route/session
+`agent-surface.config.tsx` of ~250 lines: a jsdom harness with route/session
 scenarios, a refusing fetch stub, `matchMedia` and `ResizeObserver` shims and a
-two-macrotask settle — whose only job was to mount every screen so the CLI could
+two-macrotask settle, whose only job was to mount every screen so the CLI could
 write down what appeared. Coverage was a real risk with a real allow-list
 (`.agent-surface/coverage-allow.json`): a screen nobody wrote a scenario for was
 a screen nobody reviewed, and a capability nothing mounted was invisible.
@@ -34,7 +34,7 @@ declarations out of the **production module graph**, hashes each one, and emits
 `.agent-surface/contract.json`. The registry is constructed with that artifact
 as its `authority` and refuses to register or invoke anything it cannot prove.
 A component's runtime binding may supply `read`, `execute`, `when`,
-`unavailableReason` and `precondition` — never a description, a schema or an
+`unavailableReason` and `precondition`, never a description, a schema or an
 effect.
 
 Three consequences follow, and all three are the point:
@@ -44,7 +44,7 @@ Three consequences follow, and all three are the point:
   interpolation, no concatenation, no function calls, no zod. A description that
   varies at runtime is not a contract.
 - **The three tables get three contracts.** A shared factory cannot produce
-  them, and their capability sets genuinely differ — only `invoices.pending` has
+  them, and their capability sets genuinely differ: only `invoices.pending` has
   a row selection. `useTableAgentComponent` survives as the shared *behaviour*,
   taking the contract as a parameter.
 - **Coverage stops being a question.** The contract covers every declared
@@ -56,7 +56,7 @@ Three consequences follow, and all three are the point:
 `agent-surface.config.tsx` is deleted, along with the seven per-scenario
 baselines and `coverage-allow.json`; one `contract.json` replaces them.
 `pnpm view:check` now diffs source against that artifact and classifies each
-change as widening, narrowing or neutral. `pnpm surface:static` is gone —
+change as widening, narrowing or neutral. `pnpm surface:static` is gone, and
 `--depth` no longer exists, because there is no longer a shallower answer.
 
 The scripts are named after the **planes**, not the libraries: `view:inspect` /
@@ -70,7 +70,7 @@ so it would be silently shadowed.
 Two things got better rather than merely different. Per-column filter formats
 are now documented per property in each table's `setColumnFilters` schema
 instead of as one prose blob, and `additionalProperties: false` turns an unknown
-filter key into a schema error the model can read off the schema — where it used
+filter key into a schema error the model can read off the schema, where it used
 to be a runtime precondition it could only discover by being rejected.
 
 One thing got worse, and is worth stating plainly: the dynamic hints are gone.

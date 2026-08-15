@@ -1,8 +1,8 @@
 # create-dpas-app
 
 Scaffold a **Dual-Plane Agent Stack (DPAS)** application: an agentic
-receivables console where the assistant works through governed capabilities
-— Agent Surface (`view:*`, browser), oRPC Agent (`domain:*`, server), an
+receivables console where the assistant works through governed capabilities:
+Agent Surface (`view:*`, browser), oRPC Agent (`domain:*`, server), an
 application-owned Agent Host, Mastra, and assistant-ui.
 
 ```bash
@@ -20,4 +20,4 @@ Flags: `--yes`, `--package-manager <pnpm|npm|yarn|bun>`,
 `--git/--no-git`, `--example <name>`, `--help`, `--version`.
 
 Full documentation, architecture guides, and the source of this scaffolder:
-the repository README and `docs/` — plus the docs generated into every app.
+the repository README and `docs/`, plus the docs generated into every app.

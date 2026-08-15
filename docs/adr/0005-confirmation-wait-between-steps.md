@@ -1,9 +1,9 @@
-# ADR-0005 — Confirmation mode: `wait`, executed between protocol steps
+# ADR-0005 · Confirmation mode: `wait`, executed between protocol steps
 
 **Status:** accepted · 2026-07-30 · **amended 2026-08-02**
 
-> **Amendment.** The decision below — `topology: "remote"` with
-> `confirmations: "wait"` — still stands and is still what the toolset is built
+> **Amendment.** The decision below (`topology: "remote"` with
+> `confirmations: "wait"`) still stands and is still what the toolset is built
 > with. What changed is which operations rely on it. The template's
 > consequential capabilities (`issue-invoice`, `delete-invoice`) are now gated by
 > a **server-side approval record** rather than a frontend confirmation
@@ -14,9 +14,9 @@
 
 ## Context
 
-Agent Surface offers two confirmation modes: `wait` — the toolset blocks until
-the user decides, then retries with the evidence attached, so one tool call
-produces one tool result — and `two-phase`, which returns
+Agent Surface offers two confirmation modes. With `wait`, the toolset blocks
+until the user decides, then retries with the evidence attached, so one tool
+call produces one tool result. With `two-phase`, the toolset returns
 `CONFIRMATION_REQUIRED` to the model and expects it to retry on a later turn.
 
 `wait` is the better shape: the model never has to be taught a two-step dance,

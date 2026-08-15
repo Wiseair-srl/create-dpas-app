@@ -1,4 +1,4 @@
-# ADR-0002 — Application-owned host protocol instead of `@assistant-ui/react-ai-sdk`
+# ADR-0002 · Application-owned host protocol instead of `@assistant-ui/react-ai-sdk`
 
 **Status:** accepted · 2026-07-30 · **amended 2026-08-02**
 
@@ -33,13 +33,13 @@ application code.
 
 - Browser → server: one POST per model step-run carrying the protocol version,
   conversation and turn ids, the model messages, and wire descriptors projected
-  from the live Agent Surface toolset — declaration only, execution stays in the
+  from the live Agent Surface toolset: declaration only, execution stays in the
   browser.
 - Server → browser: NDJSON frames mapped from the runtime's stream chunks, plus
   host frames carrying correlation ids.
 - When a run ends at frontend tool calls, the browser executes them through
   Agent Surface, appends the results to the model messages, and POSTs the next
-  step. **Confirmation waits happen here, between requests** — no server stream
+  step. **Confirmation waits happen here, between requests**: no server stream
   is held open across a human decision.
 
 The chat UI uses `@assistant-ui/react` through `useExternalStoreRuntime`, so the
@@ -48,7 +48,7 @@ experience layer consumes a plain message store rather than owning the loop.
 ## Consequences
 
 - One `ai` major in the entire app; `@orpc-agent/ai-sdk` and the runtime agree.
-- The transport is explicit, versioned, unit-testable, and serverless-safe —
+- The transport is explicit, versioned, unit-testable, and serverless-safe:
   the server holds no run state, because the messages *are* the state.
 - Confirmation `wait` becomes safe ([ADR-0005](0005-confirmation-wait-between-steps.md)).
 - We forgo `useChatRuntime` conveniences (auto-continue, resume); the host
@@ -60,5 +60,5 @@ experience layer consumes a plain message store rather than owning the loop.
   requires, a `useChatRuntime` transport can be offered as an alternative
   adapter without touching either capability provider.
 - The ceiling of this protocol is now the application's problem rather than a
-  dependency's — the catalog limits, the scoping rules and the cache-stability
+  dependency's: the catalog limits, the scoping rules and the cache-stability
   design in [Host protocol](../reference/host-protocol.md) all follow from that.

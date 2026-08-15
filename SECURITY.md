@@ -21,7 +21,7 @@ vulnerability"). You will get an acknowledgement within a few days.
   regressions there are treated as security bugs.
 
 Vulnerabilities in the upstream capability providers belong to their own
-trackers — see the SECURITY.md of
+trackers. See the SECURITY.md of
 [`@agent-surface/core`](https://www.npmjs.com/package/@agent-surface/core) and
 [`@orpc-agent/core`](https://www.npmjs.com/package/@orpc-agent/core)
 (github.com/Wiseair-srl/orpc-agent).

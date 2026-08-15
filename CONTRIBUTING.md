@@ -13,17 +13,17 @@ Node >= 22.13 and pnpm 10 (via corepack) are required.
 
 ## Repository layout
 
-- `templates/default` — the golden application. **This is the product.** It is
+- `templates/default`: the golden application. **This is the product.** It is
   a normal workspace app: run it, test it, change it directly.
-- `packages/create-dpas-app` — the CLI. Its build step copies the template
+- `packages/create-dpas-app`: the CLI. Its build step copies the template
   into the package (`scripts/sync-template.mjs`).
-- `examples/generated-default` — a committed generator artifact. Never edit it
+- `examples/generated-default`: a committed generator artifact. Never edit it
   by hand; run `pnpm regen:example` after template changes (CI enforces this
   with `pnpm check:example`).
-- `docs/` — the documentation site (VitePress) and ADRs. Run it with
+- `docs/`: the documentation site (VitePress) and ADRs. Run it with
   `pnpm docs:dev`; `pnpm docs:build` also fails on dead links. Architectural
   decisions get an ADR. The guides that ship inside generated apps live in
-  `templates/default/docs/` and are `@include`d by the site — edit them there,
+  `templates/default/docs/` and are `@include`d by the site. Edit them there,
   never twice.
 
 ## Quality gates (all must pass)
@@ -47,7 +47,7 @@ capability run `pnpm view:snapshot` and/or `pnpm domain:snapshot` in
 The rules that keep this project honest:
 
 - No test may require a model provider or API key.
-- **Both committed inventories are agent-facing API** —
+- **Both committed inventories are agent-facing API**:
   `templates/default/.agent-surface/contract.json` for the view plane and
   `capabilities.snapshot.json` for the domain plane. Review their diffs like API
   diffs: a changed description is a changed prompt.

@@ -1,17 +1,17 @@
-# ADR-0004 — Zero-configuration embedded data store: a JSON file
+# ADR-0004 · Zero-configuration embedded data store: a JSON file
 
 **Status:** accepted · 2026-07-30
 
 ## Context
 
 The app has to run immediately after `create`, with no database to install and
-no connection string to fill in — while still being honest that a mutation
+no connection string to fill in, while still being honest that a mutation
 *persisted*, because "the approval was decided and the ledger moved" is the
 thing a reader is trying to verify. Options considered:
 
-- **better-sqlite3 / libsql** — real SQL, but native builds are the single most
+- **better-sqlite3 / libsql**: real SQL, but native builds are the single most
   common `create-*` install failure (platform prebuilds, Node ABI drift).
-- **In-memory only** — zero install risk, but loses state across restarts, which
+- **In-memory only**: zero install risk, but loses state across restarts, which
   makes exactly that verification impossible.
 
 ## Decision
