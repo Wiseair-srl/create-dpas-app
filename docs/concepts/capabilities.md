@@ -1,10 +1,10 @@
 # Anatomy of a capability
 
-> **This page:** what a capability actually is on each plane — its identity, its fields, its lifetime, and what the model receives. The task-shaped version is [Adding a capability](../guides/adding-a-capability.md).
+> **This page:** what a capability actually is on each plane: its identity, its fields, its lifetime, and what the model receives. The task-shaped version is [Adding a capability](../guides/adding-a-capability.md).
 
 ## Identity
 
-Every capability has one **canonical id**, prefixed by its plane, and one **wire name** — the provider-safe form the model calls. The mapping is mechanical and reversible (`:` → `_`, `.` → `__`):
+Every capability has one **canonical id**, prefixed by its plane, and one **wire name**, the provider-safe form the model calls. The mapping is mechanical and reversible (`:` → `_`, `.` → `__`):
 
 | Canonical id | Wire name |
 |---|---|
@@ -13,16 +13,16 @@ Every capability has one **canonical id**, prefixed by its plane, and one **wire
 | `domain:list-invoices` | `domain_list-invoices` |
 | `domain:issue-invoice` | `domain_issue-invoice` |
 
-The canonical id is the **audit identity** — it is what the timeline, the audit records and your tests refer to. The wire name exists only because model providers restrict tool-name characters. Multiple mounted instances of the same component add an `_at_<instance>` suffix to the wire name; the canonical id in front of it is unchanged.
+The canonical id is the **audit identity**: it is what the timeline, the audit records and your tests refer to. The wire name exists only because model providers restrict tool-name characters. Multiple mounted instances of the same component add an `_at_<instance>` suffix to the wire name; the canonical id in front of it is unchanged.
 
-A `domain:` capability's id is its key in the flat registry: `mark-invoice-paid` there is `domain:mark-invoice-paid` everywhere else. Flat on purpose — that one string is the audit identity, the MCP tool name, the manifest key and what a policy matches on, so there is nowhere for four readers to disagree about how to flatten it.
+A `domain:` capability's id is its key in the flat registry: `mark-invoice-paid` there is `domain:mark-invoice-paid` everywhere else. Flat on purpose: that one string is the audit identity, the MCP tool name, the manifest key and what a policy matches on, so there is nowhere for four readers to disagree about how to flatten it.
 
 ## A view capability
 
 **Declared** in `app/agent/surface/contracts.ts`, **bound** by the component that owns the state. Two kinds:
 
-- an **observation** — a semantic read. No effect, never confirmed.
-- an **action** — something that changes page state or navigates.
+- an **observation**: a semantic read. No effect, never confirmed.
+- an **action**: something that changes page state or navigates.
 
 The declaration is what the model sees, and it is compiled out of your source at build time ([ADR-0011](../adr/0011-compiled-capability-contracts.md)):
 
@@ -56,7 +56,7 @@ useAgentComponent(pendingInvoicesTableContract, {
 });
 ```
 
-The table screens do not write the binding by hand — `useTableAgentComponent`
+The table screens do not write the binding by hand: `useTableAgentComponent`
 supplies the whole plane's behaviour from the state a screen already has, given
 that screen's contract. It is worth reading in the expanded form once, because
 that hook is a loop over exactly these fields.
@@ -67,18 +67,18 @@ may only supply behaviour. A binding that tries to set a description, a schema
 or an effect is a type error, and one the contract does not declare is refused
 by the registry ([ADR-0011](../adr/0011-compiled-capability-contracts.md)).
 
-Declared in the contract — what the model sees:
+Declared in the contract, what the model sees:
 
 | Field | Meaning |
 |---|---|
 | `type` + key | Together form the id: `view:invoices.pending.setFilters` |
 | `description` | What the model reads. Write it for a stranger, not for you |
 | `input` / `output` | Literal JSON Schema through `fromJsonSchema(…)`; validated before `execute` ever runs |
-| `effect` | `local-state` or `navigation` — the only two. Anything server-side belongs to the domain plane |
+| `effect` | `local-state` or `navigation`, the only two. Anything server-side belongs to the domain plane |
 | `idempotent` | Safe to repeat with the same input |
 | `confirmation` | `never` · `optional` · `required` |
 
-Supplied by the binding — behaviour only:
+Supplied by the binding, behaviour only:
 
 | Field | Meaning |
 |---|---|
@@ -90,7 +90,7 @@ Above both sits the registry's own baseline (`app/agent/surface/registry.ts`):
 the compiled contract as its `authority`, and `policies: [authenticated()]`, so
 a tab with no session has no surface at all rather than an empty one.
 
-**Lifetime is the mount.** Registering is the only way a capability exists; unmounting removes it. The browser snapshots the live surface at the start of every protocol step, so what the model sees is what is on the page right now — and a call against a stale registration fails with `STALE_CAPABILITY` or `COMPONENT_UNMOUNTED` rather than silently hitting the wrong component.
+**Lifetime is the mount.** Registering is the only way a capability exists; unmounting removes it. The browser snapshots the live surface at the start of every protocol step, so what the model sees is what is on the page right now, and a call against a stale registration fails with `STALE_CAPABILITY` or `COMPONENT_UNMOUNTED` rather than silently hitting the wrong component.
 
 ## A domain capability
 
@@ -118,18 +118,18 @@ export const listInvoices = agentBase
 |---|---|
 | `description` | What the model reads |
 | `expose` | **Deny by default.** Only the surfaces you list are reachable: `aiSdk`, `mcp`, `test`, `direct`, `workflow`. No `agent` block at all means invisible to every agent |
-| `sideEffect` | `none` · `read` · `write` · `destructive` · `external` — declare honestly; it drives UI treatment and review |
+| `sideEffect` | `none` · `read` · `write` · `destructive` · `external`. Declare honestly; it drives UI treatment and review |
 | `risk` | `low` · `medium` · `high` · `critical` |
 | `tags` | The scope token. One per vertical; the route map in `app/agent/host/scope.ts` narrows discovery by it |
 | `redact` | Caps what a MODEL sees of the output. The UI reads through plain oRPC and is never redacted |
 
-Governance is not something you remember to call: every invocation, on every adapter, passes the same pipeline — exposure check, input validation, policy evaluation, execution under *your* oRPC middleware, output validation, redaction, audit. Errors reach the model in exactly two shapes: a public code and message, or a generic `INTERNAL_ERROR`.
+Governance is not something you remember to call: every invocation, on every adapter, passes the same pipeline: exposure check, input validation, policy evaluation, execution under *your* oRPC middleware, output validation, redaction, audit. Errors reach the model in exactly two shapes: a public code and message, or a generic `INTERNAL_ERROR`.
 
-**Policies decide by actor.** The template's `analyst-hides-writes` policy hides write capabilities from non-controllers at discovery *and* at invocation — for an analyst the capability does not exist, which is exactly what a probing model should learn.
+**Policies decide by actor.** The template's `analyst-hides-writes` policy hides write capabilities from non-controllers at discovery *and* at invocation: for an analyst the capability does not exist, which is exactly what a probing model should learn.
 
 ## The third shape: a contextual reference
 
-A domain capability can be made reachable **only through the live UI**, with its input bound to what the user is looking at. That takes four declarations — the procedure opting out of direct exposure, the frontend manifest admitting it, a `defineAgentProcedureContract` declaring what the model sees, and the owning component binding it:
+A domain capability can be made reachable **only through the live UI**, with its input bound to what the user is looking at. That takes four declarations: the procedure opting out of direct exposure, the frontend manifest admitting it, a `defineAgentProcedureContract` declaring what the model sees, and the owning component binding it:
 
 ```tsx
 useAgentProcedure(updateCollectionStatusContract, getDomainRefs()["update-collection-status"], {
@@ -142,7 +142,7 @@ useAgentProcedure(updateCollectionStatusContract, getDomainRefs()["update-collec
 
 Bound keys are **removed from the advertised input schema and locked**: supplying one anyway returns `INVALID_INPUT { lockedFields: [...] }`.
 
-Reach for this when correctness depends on pointing at what the user is looking at — and **not** as a way to make a dangerous operation safer. A contextual binding reaches the server as `surface: "direct"`, which the model-write gate lets through by design, so binding a gated capability trades a persisted approval for a browser dialog. Bind for context; gate for consequence ([ADR-0010](../adr/0010-approvals-over-confirmations.md)).
+Reach for this when correctness depends on pointing at what the user is looking at, and **not** as a way to make a dangerous operation safer. A contextual binding reaches the server as `surface: "direct"`, which the model-write gate lets through by design, so binding a gated capability trades a persisted approval for a browser dialog. Bind for context; gate for consequence ([ADR-0010](../adr/0010-approvals-over-confirmations.md)).
 
 ## Hidden vs unavailable
 
@@ -151,7 +151,7 @@ Two different answers to two different questions, and the difference is delibera
 | | Hidden | Unavailable |
 |---|---|---|
 | Cause | the identity lacks the authority | the app is not in the right state |
-| The model sees | nothing — indistinguishable from a capability that never existed | the capability, `available: false`, and `unavailableReason` |
+| The model sees | nothing, indistinguishable from a capability that never existed | the capability, `available: false`, and `unavailableReason` |
 | Example | `domain:issue-invoice` for an analyst | `domain:update-collection-status` with no chase dialog open |
 
 **Authority hides; state discloses.** A reason string is planning fuel; leaking the shape of another identity's authority is not.
@@ -165,4 +165,4 @@ The browser projects the live surface into wire descriptors and the server compo
   effect, confirmation, available, unavailableReason? }
 ```
 
-Declaring a frontend tool grants **visibility only** — the executor never leaves the tab. Duplicate paths for one operation are refused: under protocol v2 the duplicate frontend declaration is dropped, the governed server tool kept, and the reduction reported rather than silently applied. The full transport is in [Host protocol](../reference/host-protocol.md). `pnpm view:inspect` prints this exact list, and the host streams it as a `step-start` frame on every request.
+Declaring a frontend tool grants **visibility only**: the executor never leaves the tab. Duplicate paths for one operation are refused: under protocol v2 the duplicate frontend declaration is dropped, the governed server tool kept, and the reduction reported rather than silently applied. The full transport is in [Host protocol](../reference/host-protocol.md). `pnpm view:inspect` prints this exact list, and the host streams it as a `step-start` frame on every request.
