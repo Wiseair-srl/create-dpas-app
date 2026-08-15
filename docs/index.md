@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: create-dpas-app
-  text: Agentic apps that operate the product, not the DOM
-  tagline: One command scaffolds a Dual-Plane Agent Stack application — semantic capabilities on both sides of the network, an agent host you own, server-side approvals for what matters, and a test suite that never needs a model.
+  text: One capability layer for your UI, your copilot and MCP
+  tagline: One command scaffolds a Dual-Plane Agent Stack application — one typed registry instead of a product and a parallel agent API, a catalog the model discovers deterministically per request, server-side authorization and approvals on what carries consequence, and a test suite that never needs a model.
   image:
     src: /logo.svg
     alt: create-dpas-app
@@ -20,29 +20,29 @@ hero:
       link: /security/model
 
 features:
-  - icon: 🚀
-    title: One command, zero configuration
-    details: One command produces a running receivables console — ledger, three screens, a docked copilot, an approval flow and an MCP endpoint. No database, no API key, no setup.
-    link: /getting-started
+  - icon: 🧬
+    title: One app, not two
+    details: A capability is a single typed declaration. The UI calls it directly, the copilot receives it through the host, external clients get it over MCP. No tool wrappers mirroring your procedures, no second schema to keep in sync, no product that drifts from the agent's view of it.
+    link: /concepts/capabilities
+  - icon: 🔭
+    title: Deterministic discoverability
+    details: The catalog is composed per request from identity, route and mounted components — computed, not prompted. Both planes compile to committed inventory files, so what the model can see changes only when you change it, in a diff a reviewer can read.
+    link: /adr/0011-compiled-capability-contracts
+  - icon: 🛡️
+    title: Governance that holds up to audit
+    details: Authorization runs on the server on every call. A capability the current identity lacks does not grey out — it disappears, and asking for it directly answers `Capability not found`. Consequential mutations return an approval card, and nothing moves until a human decides.
+    link: /security/model
   - icon: 🪟
     title: Two planes, never blurred
     details: View capabilities are registered by the components that own the state and execute in the browser. Domain capabilities are oRPC procedures, governed and re-authorized on the server. The model sees one catalog and cannot tell them apart.
     link: /concepts/dual-plane
-  - icon: 🎯
-    title: Bind for context, gate for consequence
-    details: A mutation that must target what the user sees is bound to it, with the field removed from the schema. One whose risk is what it does stays a governed tool behind a server-side approval. Picking the wrong shape is the expensive mistake.
-    link: /adr/0010-approvals-over-confirmations
   - icon: 🧭
     title: An agent host you own
     details: The browser↔server protocol, per-request catalog composition, executor routing, correlation ids and run limits are application modules you can read and change — not framework glue.
     link: /reference/host-protocol
-  - icon: 🔌
-    title: One registry, several transports
-    details: The same capabilities serve the UI over oRPC, the copilot through the host, and external clients over MCP. Nothing is re-declared, and `expose` decides what each one sees.
-    link: /concepts/capabilities
   - icon: 🧪
     title: Deterministic tests, no LLM
-    details: Governance and capability contracts are unit-tested; Playwright drives a production build through the live pipeline under a scripted model; both planes compile to committed inventories you diff like an API. CI never needs credentials.
+    details: Governance and capability contracts are unit-tested, and Playwright drives a production build through the live pipeline under a scripted model — the real host, the real approval flow, no provider key. CI never needs credentials.
     link: /guides/testing
 ---
 
