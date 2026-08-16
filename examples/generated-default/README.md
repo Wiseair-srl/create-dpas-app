@@ -17,7 +17,7 @@ key adds one thing: the copilot's ability to think.
 
 The app exposes two planes of capabilities and never blurs them:
 
-| | `view:*` — presentation plane | `domain:*` — authoritative plane |
+| | `view:*` (presentation plane) | `domain:*` (authoritative plane) |
 |---|---|---|
 | Meaning | what the open screen can do | operations valid with no UI at all |
 | Examples | `view:invoices.pending.setFilters`, `…selectRows` | `domain:list-invoices`, `domain:issue-invoice` |
@@ -30,11 +30,11 @@ And the rule that decides which shape a consequential operation takes:
 
 - `update-collection-status` is **bound**: `expose.aiSdk: false`, reachable by
   the model only through the open chase dialog, with `invoiceId` taken from the
-  invoice on screen and *removed from the advertised schema* — the model is not
+  invoice on screen and *removed from the advertised schema*: the model is not
   asked to leave it alone, it is given no field in which to name another one.
 - `issue-invoice` is **gated**: a direct governed tool whose model-initiated
   calls suspend into a server-side approval record. Binding it instead would
-  trade a persisted approval for a browser dialog — weaker authority on exactly
+  trade a persisted approval for a browser dialog: weaker authority on exactly
   the operation that least wants it.
 
 Both are one procedure with one implementation. What differs is a policy input,
@@ -45,7 +45,7 @@ not a second code path.
 ```
 capabilities/          the domain plane: flat oRPC procedures + meta.agent
   registry.ts          one FLAT structure, two uses (the /rpc router AND the
-                       governed registry) — a capability id is the audit
+                       governed registry). A capability id is the audit
                        identity, the MCP tool name and the manifest key
   policies.ts          gate-model-writes · analyst-hides-writes
   model.ts             the vocabulary: overdue, outstanding, ageing, in cents
@@ -54,7 +54,7 @@ server/
   rpc.ts               reads plain, writes wrapped in runtime.invoke(direct)
   runtime.ts           registry + policies + approvals + audit
   agent/host.ts        server half of the host: per-request composition
-  mcp.ts               the same capabilities over MCP — proof the registry is
+  mcp.ts               the same capabilities over MCP: proof the registry is
                        transport-agnostic
   auth.ts              demo identity, server-signed. Replace this one file.
   db/                  the embedded JSON store. Replace this one file.
@@ -73,10 +73,10 @@ app/
 
 **Without a key.** Everything but the copilot:
 
-- filter, sort, hide columns — all URL-synced, so a narrowed view is shareable;
+- filter, sort, hide columns, all URL-synced, so a narrowed view is shareable;
 - open a chase dialog and record a reminder;
-- switch identity in the header. As **Ada — analyst**, `issue-invoice` does not
-  grey out — it *disappears*. Ask the server directly and it answers
+- switch identity in the header. As **Ada, the analyst**, `issue-invoice` does
+  not grey out; it *disappears*. Ask the server directly and it answers
   `Capability not found`, which is what a probing caller should learn: nothing.
 
 **With a key.** Put `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` in `.env`,
@@ -86,7 +86,7 @@ restart, press ⌘J and ask:
 
 The copilot reads the ageing ladder on the server, narrows the table in your
 browser, reads the rows back, and answers from what it read. The table moves
-because the agent called the same setter your toolbar calls — it has no
+because the agent called the same setter your toolbar calls; it has no
 privileged channel into the UI.
 
 Then ask it to issue a draft. It will not: a model-initiated `issue-invoice`
@@ -107,8 +107,8 @@ pnpm lint · typecheck
 ```
 
 `pnpm test` and `pnpm test:e2e` never need a model provider: e2e runs a scripted
-`LanguageModelV2` through the *entire* live path — host protocol, Mastra loop,
-client-tool suspension, oRPC execution, reconciliation — so CI exercises the
+`LanguageModelV2` through the *entire* live path (host protocol, Mastra loop,
+client-tool suspension, oRPC execution, reconciliation) so CI exercises the
 real architecture and only the model is fake.
 
 ## Both inventories are an API
@@ -130,21 +130,21 @@ widening, narrowing or neutral; regenerate either with `pnpm view:snapshot` or
 
 Neither tool evaluates policies. `domain:inspect` reports that
 `gate-model-writes` and `analyst-hides-writes` exist and in which phases, never
-which capabilities they gate — that needs a real actor, surface and input, which
+which capabilities they gate. That needs a real actor, surface and input, which
 is what `capabilities/governance.test.ts` supplies.
 
 ## Going to production
 
 Four files, in rough order of urgency:
 
-1. **`server/auth.ts`** — the demo cookie. Everything else consumes only
+1. **`server/auth.ts`**, the demo cookie. Everything else consumes only
    `SessionUser` and `sessionFromRequest`.
-2. **`server/db/index.ts`** — the JSON store. The capabilities call these
+2. **`server/db/index.ts`**, the JSON store. The capabilities call these
    functions and nothing else.
-3. **`server/runtime.ts`** — swap the in-memory approval coordinator and audit
+3. **`server/runtime.ts`**: swap the in-memory approval coordinator and audit
    sink for `createPgApprovalCoordinator` / `createPgAuditSink`, and turn on
    `strict: true` (audit-before-effect is a promise only a durable sink keeps).
-4. **`server/agent/thread-store.ts`** — the JSON thread file. Mastra Memory over
+4. **`server/agent/thread-store.ts`**, the JSON thread file. Mastra Memory over
    Postgres drops in behind the same four functions.
 
 Nothing above those four knows which one you chose.

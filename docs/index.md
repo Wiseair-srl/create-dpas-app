@@ -4,7 +4,7 @@ layout: home
 hero:
   name: create-dpas-app
   text: One capability layer for your UI, your copilot and MCP
-  tagline: One command scaffolds a Dual-Plane Agent Stack application: one typed registry instead of a product and a parallel agent API, governed on the server and testable without a model.
+  tagline: 'One command scaffolds a Dual-Plane Agent Stack application: one typed registry instead of a product and a parallel agent API, governed on the server and testable without a model.'
   image:
     src: /logo.svg
     alt: create-dpas-app
@@ -26,7 +26,7 @@ features:
     link: /concepts/capabilities
   - icon: 🔭
     title: Deterministic discoverability
-    details: The catalog is composed per request from identity, route and mounted components: computed, not prompted. Both planes compile to committed inventory files, so what the model can see changes only when you change it, in a diff a reviewer can read.
+    details: 'The catalog is composed per request from identity, route and mounted components: computed, not prompted. Both planes compile to committed inventory files, so what the model can see changes only when you change it, in a diff a reviewer can read.'
     link: /adr/0011-compiled-capability-contracts
   - icon: 🛡️
     title: Governance that holds up to audit
@@ -42,7 +42,7 @@ features:
     link: /reference/host-protocol
   - icon: 🧪
     title: Deterministic tests, no LLM
-    details: Governance and capability contracts are unit-tested, and Playwright drives a production build through the live pipeline under a scripted model: the real host, the real approval flow, no provider key. CI never needs credentials.
+    details: 'Governance and capability contracts are unit-tested, and Playwright drives a production build through the live pipeline under a scripted model: the real host, the real approval flow, no provider key. CI never needs credentials.'
     link: /guides/testing
 ---
 

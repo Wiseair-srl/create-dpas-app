@@ -17,7 +17,7 @@ These properties of the generated app are covered by deterministic tests, re-run
 | Property | Where |
 |---|---|
 | Deny-by-default exposure per surface | `capabilities/governance.test.ts` |
-| Authority hides — `CAPABILITY_NOT_FOUND`, not `FORBIDDEN` | `capabilities/governance.test.ts` |
+| Authority hides: `CAPABILITY_NOT_FOUND`, not `FORBIDDEN` | `capabilities/governance.test.ts` |
 | A gated call suspends, and the data does not move | `capabilities/governance.test.ts` |
 | Rejecting an approval changes nothing | `capabilities/governance.test.ts` |
 | The same call is ungated on the direct surface | `capabilities/governance.test.ts` |
@@ -27,21 +27,21 @@ These properties of the generated app are covered by deterministic tests, re-run
 | Role authority visible in the UI | `e2e/receivables.spec.ts` |
 | Both planes execute, and the screen reconciles | `e2e/copilot.spec.ts` |
 
-None of these tests needs a model provider or an API key — see [Testing without an LLM](../guides/testing.md).
+None of these tests needs a model provider or an API key. See [Testing without an LLM](../guides/testing.md).
 
 ## The demo identity is a demo
 
 The generated app ships a server-signed session cookie with a **default secret** so it runs with zero configuration. It is not authentication: there is no login, and the header switcher re-signs a cookie for either demo user by design.
 
-`server/auth.ts` is marked in the app's README as the seam to replace before any shared deployment, and it is the only authority for identity — role claims in request bodies or tool inputs are never read anywhere. See [Deploying](../guides/deploying.md) and [ADR-0007](../adr/0007-demo-identity-signed-cookie.md).
+`server/auth.ts` is marked in the app's README as the seam to replace before any shared deployment, and it is the only authority for identity: role claims in request bodies or tool inputs are never read anywhere. See [Deploying](../guides/deploying.md) and [ADR-0007](../adr/0007-demo-identity-signed-cookie.md).
 
 ## Honest non-claims
 
-- The stack does not claim a model cannot be manipulated. It bounds what manipulation can achieve — see the prompt-injection section of [Security model](model.md).
+- The stack does not claim a model cannot be manipulated. It bounds what manipulation can achieve; see the prompt-injection section of [Security model](model.md).
 - A contextual binding is a *targeting* guarantee, not an authority one. It stops a model aiming an operation somewhere the user is not looking; it does not stop the operation. That is what approvals are for ([ADR-0010](../adr/0010-approvals-over-confirmations.md)).
-- The embedded JSON store, the in-memory approval coordinator, the in-memory audit tap and the demo identity are zero-configuration conveniences. Each is documented as a seam rather than a solution, and the in-memory approval coordinator is why the template ships `strict: false` — audit-before-effect is a promise only a durable sink can keep.
+- The embedded JSON store, the in-memory approval coordinator, the in-memory audit tap and the demo identity are zero-configuration conveniences. Each is documented as a seam rather than a solution, and the in-memory approval coordinator is why the template ships `strict: false`: audit-before-effect is a promise only a durable sink can keep.
 - `/mcp` trusts the same demo cookie as the app. A deployment puts real authorization in front of it.
 
 ## Reporting
 
-Please do not open a public issue for security reports — use GitHub's private vulnerability reporting on the repository. Full policy: [Security policy](../project/security-policy.md).
+Please do not open a public issue for security reports. Use GitHub's private vulnerability reporting on the repository. Full policy: [Security policy](../project/security-policy.md).

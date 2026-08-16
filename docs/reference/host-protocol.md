@@ -27,14 +27,14 @@ the response echoes the version the exchange actually used in
 ```ts
 {
   protocolVersion: 2,
-  conversationId: string,      // ≤ 64 chars — one chat thread
-  turnId: string,              // ≤ 64 chars — one user message and all it causes
+  conversationId: string,      // ≤ 64 chars, one chat thread
+  turnId: string,              // ≤ 64 chars, one user message and all it causes
   stepIndex: number,           // 0…64
   pathname: string,            // the route; the server derives the scope floor
-  messages: WireModelMessage[],// 1…400 — the whole history; the server is stateless
+  messages: WireModelMessage[],// 1…400, the whole history; the server is stateless
   catalog: {
     mode: "direct" | "meta",   // "direct" = one tool per capability
-    scope?: string[],          // ≤ 32 — a REQUEST, intersected with the server floor
+    scope?: string[],          // ≤ 32, a REQUEST, intersected with the server floor
     frontendTools: WireToolDescriptor[],  // ≤ 128
     truncated?: { dropped: number, reason: "budget" | "limit" | "undecodable" },
   },
@@ -281,7 +281,7 @@ registry      10 capabilities
   →  list-invoices ✓   create-invoice ✓   update-invoice ✓   issue-invoice ✓
      delete-invoice ✓  mark-invoice-paid ✓  receivables-summary ✓  collections-aging ✓
      update-collection-status ✗ (aiSdk: false)
-     list-clients ✗ (tagged `clients` — out of scope on this route)
+     list-clients ✗ (tagged `clients`, out of scope on this route)
   →  8 domain tools
 ```
 
