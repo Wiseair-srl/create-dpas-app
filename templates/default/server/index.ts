@@ -113,6 +113,10 @@ function approvalCard(record: ApprovalRecord) {
     id: record.id,
     capabilityId: record.capabilityId,
     status: record.status,
+    // Which surface suspended it. The approver page words the consequence of
+    // approving differently for an MCP record (the requesting session runs
+    // it) than for a copilot one (this server runs it in the decision POST).
+    surface: record.surface,
     // Why it was gated, and by whom it was decided. The card renders both:
     // "approved" with no approver is a decision nobody can be asked about.
     reasons: record.reasons,
@@ -186,9 +190,15 @@ app.post("/api/approvals/:id", async (c) => {
     return c.json({ error: error instanceof Error ? error.message : "Decision failed." }, 409);
   }
 
-  const result = parsed.data.approved
-    ? await runtime.resume(id, { context: contextFor(user) })
-    : undefined;
+  // Resume here only for records suspended in THIS app's own loop. An MCP
+  // record's output belongs to the session that asked: it executes over there,
+  // through the adapter's `approvals_resume` tool — resuming it here would
+  // consume the record out from under that session and strand the result in a
+  // response nobody reads.
+  const result =
+    parsed.data.approved && record.surface !== "mcp"
+      ? await runtime.resume(id, { context: contextFor(user) })
+      : undefined;
   const receipt = approvalReceiptMessage(record, parsed.data.approved ? "approved" : "denied", result);
 
   // The decision re-enters the conversation as an assistant message. Without
@@ -206,7 +216,11 @@ app.post("/api/approvals/:id", async (c) => {
 
   return c.json({
     receipt,
-    resolution: result ? serializeResult(result) : { status: "rejected" as const },
+    resolution: result
+      ? serializeResult(result)
+      : parsed.data.approved
+        ? { status: "approved" as const }
+        : { status: "rejected" as const },
   });
 });
 

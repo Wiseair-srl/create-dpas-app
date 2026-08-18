@@ -55,7 +55,8 @@ server/
   runtime.ts           registry + policies + approvals + audit
   agent/host.ts        server half of the host: per-request composition
   mcp.ts               the same capabilities over MCP: proof the registry is
-                       transport-agnostic
+                       transport-agnostic. Approvals deep-link a human to
+                       /approvals/:id; approvals_resume executes what they allow
   auth.ts              demo identity, server-signed. Replace this one file.
   db/                  the embedded JSON store. Replace this one file.
 

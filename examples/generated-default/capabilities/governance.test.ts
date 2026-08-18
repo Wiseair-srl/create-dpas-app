@@ -103,6 +103,39 @@ describe("gate for consequence", () => {
     expect(getInvoiceRow(5)?.status).toBe("sent");
   });
 
+  it("conceals a relayed resume bound to another requester", async () => {
+    const pending = await runtime.invoke("issue-invoice", { id: 5 }, { ...controller, surface: "aiSdk" });
+    if (pending.status !== "approval-required") throw new Error("expected an approval");
+    await runtime.approvals.decide(pending.approval.id, {
+      status: "approved",
+      approver: controller.actor,
+    });
+
+    // What an adapter-relayed resume passes (the MCP `approvals_resume` tool
+    // sends the session's actor and its surface). The record belongs to the
+    // controller's aiSdk loop; this caller claims neither.
+    const relayed = await runtime.resume(pending.approval.id, {
+      context: analyst.context,
+      expectedActor: analyst.actor,
+      expectedSurface: "mcp",
+    });
+
+    expect(relayed.status).toBe("failed");
+    if (relayed.status === "failed") {
+      // In-process the real code is visible; over any adapter it serializes
+      // byte-identical to an unknown id, so probing with guessed ids learns
+      // nothing — not even that the record exists.
+      expect(relayed.error.code).toBe("APPROVAL_RESUME_MISMATCH");
+      expect(relayed.error.publicMessage).toBe("The operation failed.");
+    }
+    expect(getInvoiceRow(5)?.status).toBe("draft");
+
+    // The failed relay consumed nothing: the rightful resume still executes.
+    const resumed = await runtime.resume(pending.approval.id, { context: controller.context });
+    expect(resumed.status).toBe("completed");
+    expect(getInvoiceRow(5)?.status).toBe("sent");
+  });
+
   it("changes nothing when the human rejects", async () => {
     const pending = await runtime.invoke("issue-invoice", { id: 5 }, { ...controller, surface: "aiSdk" });
     if (pending.status !== "approval-required") throw new Error("expected an approval");

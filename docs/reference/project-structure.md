@@ -28,7 +28,8 @@ server/
   runtime.ts             registry + policies + approvals + audit sinks
   mastra.ts              the agent, its instructions, the model allowlist
   scripted-model.ts      the deterministic LanguageModelV2 e2e runs on
-  mcp.ts                 the same capabilities over MCP
+  mcp.ts                 the same capabilities over MCP, approval loop
+                         included: deep link out, approvals_resume back
   auth.ts                demo identity, server-signed: replace this file
   db/                    the embedded JSON store: replace this file
   agent/host.ts          server half of the Agent Host

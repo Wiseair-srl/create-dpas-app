@@ -33,7 +33,7 @@ function describeInput(capabilityId: string, input: unknown): string {
 }
 
 export function approvalReceiptMessage(
-  record: Pick<ApprovalRecord, "id" | "capabilityId" | "input">,
+  record: Pick<ApprovalRecord, "id" | "capabilityId" | "input" | "surface">,
   decision: "approved" | "denied",
   result?: ExecutionResult<unknown>,
 ): ApprovalReceipt {
@@ -43,6 +43,12 @@ export function approvalReceiptMessage(
     return { text: `You denied ${what}. Nothing was changed.`, ok: false };
   }
   if (!result) {
+    // An MCP-surface record is deliberately not resumed by this app: the
+    // requesting session executes it through `approvals_resume`, so approval
+    // is the only thing that has happened yet.
+    if (record.surface === "mcp") {
+      return { text: `You approved ${what}. The requesting MCP session can now run it.`, ok: true };
+    }
     return { text: `You approved ${what}. It is running.`, ok: true };
   }
   switch (result.status) {

@@ -46,6 +46,7 @@ export type ApprovalStatus =
 export type ApprovalCardData = {
   id: string;
   capabilityId: string;
+  surface?: string;
   reasons: string[];
   input: unknown;
   risk?: string;

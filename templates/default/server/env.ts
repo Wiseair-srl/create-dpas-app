@@ -43,6 +43,19 @@ export const env = {
    * to give it to.
    */
   PORT: Number(process.env.SERVER_PORT ?? process.env.PORT ?? 3001),
+  /**
+   * Origin for the approval deep links handed to MCP clients (server/mcp.ts).
+   * Absolute by necessity: the link travels into someone else's chat window,
+   * where a relative path has nothing to resolve against. The default mirrors
+   * the port rules above — Vite's origin while SERVER_PORT marks this process
+   * as the dev half, this server's own origin when it is the only process.
+   */
+  APP_URL: (
+    process.env.APP_URL ??
+    (process.env.SERVER_PORT
+      ? `http://localhost:${process.env.WEB_PORT ?? process.env.PORT ?? 3000}`
+      : `http://localhost:${process.env.PORT ?? 3001}`)
+  ).replace(/\/+$/, ""),
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ?? "",
   ANTHROPIC_MODELS: list(process.env.ANTHROPIC_MODELS),
