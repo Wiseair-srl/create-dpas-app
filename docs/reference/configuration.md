@@ -15,6 +15,7 @@ The generated `.env` comes from the template's `.env.example` with **every key l
 | `DEFAULT_MODEL` | `provider/id` | `anthropic/claude-sonnet-4-5` | The model a turn runs on when the browser names none. Ignored unless it is one of the allowed ids |
 | `AUTH_SECRET` | secret | `dpas-dev-secret-change-me` | HMAC secret for the demo session cookie. **Change it before sharing a deployment** |
 | `PORT` | number | `3001` (server) · `3000` (Vite) | In production, where the one process listens. In development, where **Vite** listens |
+| `APP_URL` | origin | dev: Vite's origin · prod: this server | Absolute origin for the approval deep links handed to MCP clients. Set it when the app is reachable at a public URL |
 | `SERVER_PORT` | number | `3001` | Development only: where the Hono server listens, and what Vite proxies to |
 | `DPAS_DATA_DIR` | path | `<cwd>/.data` | Where the embedded store writes `db.json` and `threads.json` |
 | `MODEL_PROVIDER` | `mock` | unset | Test hook only. `mock` swaps in the scripted `LanguageModelV2` the e2e suite runs on |

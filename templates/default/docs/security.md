@@ -53,6 +53,20 @@ The same operation from the app's own UI passes ungated: a person clicking a
 button in their own session has already expressed intent. One implementation,
 two callers, and the difference between them is a policy input.
 
+Over MCP the loop closes without ever letting that surface decide. The
+suspension envelope carries a deep link to `/approvals/:id`, where a human
+decides inside this app, authenticated like any other route; the link is a
+locator, never an authority, and possession of it grants nothing. Once
+approved, the requesting session executes the operation itself through the
+adapter's `approvals_resume` tool, exactly once. The runtime binds that
+resume to the session's actor and the `mcp` surface: any other record fails
+identically to an unknown id, and the attempt is audited as
+`APPROVAL_RESUME_MISMATCH` under the caller's identity. The residual worth
+naming: a prompt-injected model in the requester's own session could resume
+an approval the human granted but meant to abandon. Expiry bounds that
+window, rejection is terminal, and every resume is audited; if that residual
+is unacceptable for a capability, keep it off the `mcp` surface.
+
 The in-memory coordinator this template ships forgets pending approvals on
 restart. That is the honest zero-config choice, not a recommendation: a
 deployment swaps in `createPgApprovalCoordinator` and turns on `strict: true`,

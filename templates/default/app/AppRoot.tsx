@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { Shell } from "./Shell";
 import { ConfirmProvider } from "./components/ConfirmProvider";
 import { SessionProvider } from "./lib/session";
+import Approval from "./routes/approval";
 import Architecture from "./routes/architecture";
 import ReceivablesAll from "./routes/receivables.all";
 import ReceivablesClients from "./routes/receivables.clients";
@@ -66,6 +67,9 @@ export function AppRoutes() {
         <Route path="/receivables/all" element={<ReceivablesAll />} />
         <Route path="/receivables/clients" element={<ReceivablesClients />} />
         <Route path="/architecture" element={<Architecture />} />
+        {/* Where an MCP approval deep link lands (server/mcp.ts). Not in the
+            nav: nobody browses TO an approval, a link brings them. */}
+        <Route path="/approvals/:id" element={<Approval />} />
         <Route path="*" element={<Navigate to="/receivables/pending" replace />} />
       </Route>
     </Routes>

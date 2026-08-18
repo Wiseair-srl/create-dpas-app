@@ -76,14 +76,14 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
       '@orpc-agent/ai-sdk':
-        specifier: ^2.0.2
-        version: 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)
+        specifier: ^3.0.0
+        version: 3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)
       '@orpc-agent/core':
-        specifier: ^2.0.2
-        version: 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+        specifier: ^3.0.0
+        version: 3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@orpc-agent/mcp':
-        specifier: ^2.0.2
-        version: 2.0.2(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+        specifier: ^3.0.0
+        version: 3.0.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@orpc/client':
         specifier: ^1.14.13
         version: 1.14.13(@opentelemetry/api@1.9.0)
@@ -203,11 +203,11 @@ importers:
         specifier: ^9.39.5
         version: 9.39.5
       '@orpc-agent/cli':
-        specifier: ^2.1.0
-        version: 2.1.0(@orpc-agent/core@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)
+        specifier: ^3.0.0
+        version: 3.0.0(@orpc-agent/core@3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)
       '@orpc-agent/testing':
-        specifier: ^2.0.2
-        version: 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+        specifier: ^3.0.0
+        version: 3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@playwright/test':
         specifier: ^1.62.0
         version: 1.62.0
@@ -1242,21 +1242,21 @@ packages:
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
 
-  '@orpc-agent/ai-sdk@2.0.2':
-    resolution: {integrity: sha512-olavUDClYy7wq5Sfh9btbRX4o75v1E8Q1+rQwiVhjBF5Zd839naHsT0w5zpANQ7PX2aTKrBscMPjKPfw7L0NgA==}
+  '@orpc-agent/ai-sdk@3.0.0':
+    resolution: {integrity: sha512-Z6zPb4rePrefGrTLM7qW+f5VZW9lkPZ9poBN7AHSgQe+hKrIqUa1mE10R3XhkyIjKcpPLfZyYvPoRC5gyCO0Pg==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       ai: ^5.0.0 || ^6.0.0
 
-  '@orpc-agent/cli@2.1.0':
-    resolution: {integrity: sha512-Ir6KuxVKEzcf7lhnBO0GuVuFO56o3U/CG222d7drRnGjumfX9wqPFcVf46b58IxjUc4EtzEroL7C+kxChSPIwg==}
+  '@orpc-agent/cli@3.0.0':
+    resolution: {integrity: sha512-/1js51Qp7u52xlze3P1k4lkcbA6LKqI/zwPsu6gmy+dvbGAVFMpVRogM+tfb6Qf96lk1Z9wJ6o8ORLSAbEnUQg==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
-      '@orpc-agent/core': ^2.0.2
+      '@orpc-agent/core': ^3.0.0
 
-  '@orpc-agent/core@2.0.2':
-    resolution: {integrity: sha512-OBWQsVFEUlIRfc3CPJu1JNcq5Ed6QZPVkJFKMSliZCyK+hnEp7861kcdweOk/E6SpYR9WDFwGKi9xHeIh4YrYQ==}
+  '@orpc-agent/core@3.0.0':
+    resolution: {integrity: sha512-j7nOhjqDQ6FdQC8YG82KC6rvoUn+Dgsj2CbNv1U2VKDGzt226grZGcf9qDWpPJFQOLJyQGkg//AbrmKaP5Yzrw==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@orpc/server': ^1.14.10
@@ -1265,14 +1265,14 @@ packages:
       zod:
         optional: true
 
-  '@orpc-agent/mcp@2.0.2':
-    resolution: {integrity: sha512-a/Oa1L5QXqMfLo+tKbcJWOn5dFHAAVm3Z7qTlheVrmrIythS48FpGK3rIkuV884wbLrUrAbO+wXq+C3wvucfRw==}
+  '@orpc-agent/mcp@3.0.0':
+    resolution: {integrity: sha512-ErEUdpupQjV6wLyLJpgZ3BIgp0k7JG2GMxsK98AHcdgxnArxg5sCXIB0ZEfW8uPq7DcQrQ+SD9nwGZYpVn5eEA==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.17.0
 
-  '@orpc-agent/testing@2.0.2':
-    resolution: {integrity: sha512-X45udRrWY1ZhuXb9PJnTr/XhAdbuJmlfR0x2yK28q48RrCU+qL4WKNO0ldU1/7g2t2uUKv1DP6YGGEkNNZZqiQ==}
+  '@orpc-agent/testing@3.0.0':
+    resolution: {integrity: sha512-DLHzcJB5weOmZH0uLgPIgv7edYWOgaEQqGd96isO9UvkTYcxney6qktSMGG85bSW3lOffgsBdYjXhNnEbEzr2Q==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@orpc/server': ^1.14.10
@@ -6463,17 +6463,17 @@ snapshots:
 
   '@opentelemetry/api@1.9.0': {}
 
-  '@orpc-agent/ai-sdk@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)':
+  '@orpc-agent/ai-sdk@3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(ai@5.0.221(zod@4.4.3))(zod@4.4.3)':
     dependencies:
-      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       ai: 5.0.221(zod@4.4.3)
     transitivePeerDependencies:
       - '@orpc/server'
       - zod
 
-  '@orpc-agent/cli@2.1.0(@orpc-agent/core@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)':
+  '@orpc-agent/cli@3.0.0(@orpc-agent/core@3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3))(@types/react@19.2.17)':
     dependencies:
-      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
     optionalDependencies:
       ink: 7.1.1(@types/react@19.2.17)(react@19.2.8)
       react: 19.2.8
@@ -6483,24 +6483,24 @@ snapshots:
       - react-devtools-core
       - utf-8-validate
 
-  '@orpc-agent/core@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
+  '@orpc-agent/core@3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
     dependencies:
       '@orpc/server': 1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1)
       '@standard-schema/spec': 1.1.0
     optionalDependencies:
       zod: 4.4.3
 
-  '@orpc-agent/mcp@2.0.2(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
+  '@orpc-agent/mcp@3.0.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
     transitivePeerDependencies:
       - '@orpc/server'
       - zod
 
-  '@orpc-agent/testing@2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
+  '@orpc-agent/testing@3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)':
     dependencies:
-      '@orpc-agent/core': 2.0.2(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
+      '@orpc-agent/core': 3.0.0(@orpc/server@1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1))(zod@4.4.3)
       '@orpc/server': 1.14.13(@opentelemetry/api@1.9.0)(ws@8.21.1)
     transitivePeerDependencies:
       - zod

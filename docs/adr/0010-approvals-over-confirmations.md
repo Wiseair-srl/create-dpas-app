@@ -53,3 +53,10 @@ manifest is the enforcement, and the comment in that file is the explanation.
   over a history in which the model asked for something and nothing answered.
   `server/approval-receipt.ts` writes that message, from the record and the
   result, so approving something that then failed says so.
+- The same loop closes over MCP without weakening the rule that deciding is
+  impossible on that surface (orpc-agent 3.0): the suspension envelope
+  deep-links the human to `/approvals/:id` in this app, and once they approve
+  there, the requesting session executes the operation through the adapter's
+  `approvals_resume` tool, which the runtime binds to that session's actor
+  and surface. An MCP record is therefore never resumed by the decision
+  endpoint; its output belongs to the session that asked.
