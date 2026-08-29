@@ -78,10 +78,11 @@ There is nothing to reach and nothing to allow-list. Capabilities are declared s
 The same bargain for the other plane, and the reason the two commands are named after planes rather than after the libraries behind them. It reads the `governance` export of `server/runtime.ts` (registry plus runtime policies, without building a runtime) and fails when it disagrees with the committed `capabilities.snapshot.json`. `pnpm domain:inspect` prints it as a table. Regenerate with `pnpm domain:snapshot`.
 
 ```
-10 capabilities · 10 exposed · 0 approval-gated (declared) · 2 runtime policies
+10 capabilities · 10 exposed
+risk 5 low · 3 medium · 2 high · declared gates: 0 approval · 6 policy-scoped capabilities · 2 runtime policies
 ```
 
-Read `0 approval-gated` carefully: it is a statement about `meta.approval`, never on its own a statement that nothing is gated. `gate-model-writes` decides on surface, actor and input, which needs a real invocation. This tool reports that a policy *exists* and in which phases, never what it gates. That question belongs to level 1, which answers it against a real runtime.
+Read `declared gates` carefully: `0 approval` is a statement about `meta.approval`, never on its own a statement that nothing is gated. The `POLICIES` cells include `runtime:gate-model-writes` and `runtime:analyst-hides-writes` wherever their authoritative scopes match. That is candidate coverage, not a verdict: the real surface, actor, input, and context still determine approval, hiding, or allowing at level 1.
 
 ## What to assert for anything you add
 

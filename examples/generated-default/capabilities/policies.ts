@@ -21,18 +21,28 @@ import type { AppContext } from "./base";
  * app. A human clicking the button in their own session has already expressed
  * intent, so these are gated only when a MODEL loop is the caller.
  */
-export const GATED_CAPABILITIES = new Set(["issue-invoice", "delete-invoice"]);
+export const GATED_CAPABILITY_IDS = ["issue-invoice", "delete-invoice"] as const;
+export const GATED_CAPABILITIES = new Set<string>(GATED_CAPABILITY_IDS);
 
-export const gateModelWrites = definePolicy("gate-model-writes", ({ surface, capability }) => {
-  const modelDriven = surface === "aiSdk" || surface === "mcp";
-  if (modelDriven && GATED_CAPABILITIES.has(capability.id)) {
-    return requireApproval({
-      reason: `${capability.id} was initiated from a model loop`,
-      approvalType: "human-confirmation",
-    });
-  }
-  return allow();
-});
+export const gateModelWrites = definePolicy(
+  "gate-model-writes",
+  ({ surface, capability }) => {
+    const modelDriven = surface === "aiSdk" || surface === "mcp";
+    if (modelDriven && GATED_CAPABILITIES.has(capability.id)) {
+      return requireApproval({
+        reason: `${capability.id} was initiated from a model loop`,
+        approvalType: "human-confirmation",
+      });
+    }
+    return allow();
+  },
+  {
+    scope: {
+      capabilities: { ids: GATED_CAPABILITY_IDS },
+      surfaces: ["aiSdk", "mcp"],
+    },
+  },
+);
 
 /**
  * Role authority. Reads are open to everyone with a session; anything that
@@ -49,5 +59,8 @@ export const analystHidesWrites = definePolicy(
     if (session?.role !== "controller") return hide();
     return allow();
   },
-  { phases: ["discovery", "invocation"] },
+  {
+    phases: ["discovery", "invocation"],
+    scope: { capabilities: { sideEffects: ["write", "destructive", "external"] } },
+  },
 );

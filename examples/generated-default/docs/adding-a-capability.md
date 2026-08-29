@@ -163,8 +163,9 @@ export of `server/runtime.ts` (registry plus runtime policies, without building
 a runtime) and fails when it disagrees with `capabilities.snapshot.json`.
 Regenerate with `pnpm domain:snapshot`.
 
-It reports that a policy *exists*, never what it gates: `gate-model-writes` and
-`analyst-hides-writes` decide on surface, actor and input, which needs a real
-invocation. So a `0` in the APPROVAL column is a statement about `meta.approval`,
-not a claim that nothing is gated. The exit codes are `0` clean, `1` drift,
+It reports each policy's authoritative scope and matching candidate capabilities;
+the table prefixes those matches with `runtime:`. It never claims a verdict:
+`gate-model-writes` and `analyst-hides-writes` still decide from the real surface,
+actor, input, and context. So a `0` in APPROVAL is metadata, not a claim that
+nothing is gated. The exit codes are `0` clean, `1` drift,
 `2` could not run, and CI has to keep the last two apart.
