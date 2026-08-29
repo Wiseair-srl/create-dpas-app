@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "capabilities": [
     {
       "id": "collections-aging",
@@ -235,6 +235,22 @@
         "name": "gate-model-writes",
         "phases": [
           "invocation"
+        ],
+        "scope": {
+          "capabilities": {
+            "ids": [
+              "delete-invoice",
+              "issue-invoice"
+            ]
+          },
+          "surfaces": [
+            "aiSdk",
+            "mcp"
+          ]
+        },
+        "capabilities": [
+          "delete-invoice",
+          "issue-invoice"
         ]
       },
       {
@@ -242,6 +258,23 @@
         "phases": [
           "discovery",
           "invocation"
+        ],
+        "scope": {
+          "capabilities": {
+            "sideEffects": [
+              "write",
+              "destructive",
+              "external"
+            ]
+          }
+        },
+        "capabilities": [
+          "create-invoice",
+          "delete-invoice",
+          "issue-invoice",
+          "mark-invoice-paid",
+          "update-collection-status",
+          "update-invoice"
         ]
       }
     ]
