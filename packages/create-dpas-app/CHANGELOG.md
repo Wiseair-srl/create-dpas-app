@@ -1,5 +1,11 @@
 # create-dpas-app
 
+## 0.5.0
+
+### Minor Changes
+
+- 596b415: Annotate generated runtime policies with authoritative capability scopes, commit version-3 domain snapshots, and scaffold `@orpc-agent/*` 4.0.0 with `@agent-surface/*` 0.23.0.
+
 ## 0.4.0
 
 ### Minor Changes
