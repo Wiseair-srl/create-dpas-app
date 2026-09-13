@@ -123,8 +123,33 @@ it("stops the AI SDK 6 loop on backend approval", async () => {
   expect(client.resumeApproval).not.toHaveBeenCalled();
 });
 
-it("suspends and resumes the original tool with native Mastra 1.53", async () => {
-  const { tools, client, options } = setup(true);
+it("preserves completed effects when the receipt observer fails", async () => {
+  const { options, client } = setup();
+  const tools = createMastraDomainTools({
+    ...options,
+    onOutcome: async () => {
+      throw new Error("Observer unavailable");
+    },
+  });
+  const response = await generateText({
+    model: model(),
+    tools,
+    prompt: "Pay",
+    stopWhen: stepCountIs(3),
+  });
+  expect(response.steps[0]!.toolResults[0]!.output).toMatchObject({ status: "completed" });
+  expect(response.text).toBe("Done");
+  expect(client.invoke).toHaveBeenCalledTimes(1);
+});
+
+it("suspends despite observer failure and resumes the original tool with native Mastra 1.53", async () => {
+  const { client, options } = setup(true);
+  const tools = createMastraDomainTools({
+    ...options,
+    onOutcome: async () => {
+      throw new Error("Observer unavailable");
+    },
+  });
   const scripted = model();
   const agent = new Agent({
     id: "test-agent",

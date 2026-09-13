@@ -87,6 +87,10 @@ only its expected revision. The shipped Postgres implementation provides both.
 Keep receipt retention at least as long as recoverable runs. The in-memory
 implementation is for local examples and tests.
 
+`onOutcome` is a best-effort observer. Its failure cannot erase a completed
+receipt or bypass approval suspension. Handle/report observer errors in the
+application; persist required mutation events in the backend transaction/outbox.
+
 The host journal cannot close the crash window between an external effect and
 its backend receipt. Domain handlers still need transactional business constraints,
 outboxes or downstream idempotency using the gateway's stable effect key. Long

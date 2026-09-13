@@ -31,7 +31,7 @@ export function createMastraDomainTools<Outcome extends DomainOutcome>(options: 
   runId: string;
   /** Canonical IDs already presented contextually through a browser binding. */
   contextualCapabilityIds?: readonly string[];
-  /** Application callback for authorized mutation receipt/event publication. */
+  /** Best-effort receipt observer. Failures cannot change an outcome or bypass suspension. */
   onOutcome?: (event: {
     capabilityId: string;
     toolCallId: string;
@@ -86,11 +86,16 @@ export function createMastraDomainTools<Outcome extends DomainOutcome>(options: 
               execution.abortSignal,
             )) ?? outcome;
         }
-        await options.onOutcome?.({
-          capabilityId: descriptor.id,
-          toolCallId: execution.toolCallId,
-          outcome,
-        });
+        try {
+          await options.onOutcome?.({
+            capabilityId: descriptor.id,
+            toolCallId: execution.toolCallId,
+            outcome,
+          });
+        } catch {
+          // The backend receipt remains authoritative. An observer failure must
+          // not invite a duplicate effect or skip a required native suspension.
+        }
         if (
           (outcome.status === "approval-required" || outcome.status === "outcome-unknown") &&
           context.suspend
