@@ -1,5 +1,11 @@
 # create-dpas-app
 
+## 0.6.0
+
+### Minor Changes
+
+- Publish installable host, Mastra, browser transport and Postgres integration subpaths. Compose remote governed domain capabilities with browser-owned tools; persist invocation and approval correlation before dispatch, reconcile unknown outcomes without repeating effects, and bind browser results to their original session and tool call. Support AI SDK 5/6, native Mastra suspension/resumption and explicit server-owned conversation memory. Include a runnable three-process reference and configurable starter backend/agent transports.
+
 ## 0.5.0
 
 ### Minor Changes

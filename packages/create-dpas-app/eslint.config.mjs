@@ -6,6 +6,16 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ["reference/**/*.mjs"],
+    languageOptions: {
+      globals: { fetch: "readonly", crypto: "readonly", ReadableStream: "readonly" },
+    },
+  },
+  {
+    files: ["reference/**/browser.mjs"],
+    languageOptions: { globals: { document: "readonly", window: "readonly" } },
+  },
+  {
     languageOptions: {
       globals: { console: "readonly", process: "readonly" },
     },

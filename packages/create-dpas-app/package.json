@@ -1,6 +1,6 @@
 {
   "name": "create-dpas-app",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Scaffold a Dual-Plane Agent Stack (DPAS) application: Agent Surface + oRPC Agent + Mastra + assistant-ui.",
   "type": "module",
   "license": "MIT",
@@ -23,10 +23,27 @@
   },
   "files": [
     "dist",
-    "template"
+    "template",
+    "reference"
   ],
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./host": {
+      "types": "./dist/host/index.d.ts",
+      "import": "./dist/host/index.js"
+    },
+    "./host/transport": {
+      "types": "./dist/host/transport.d.ts",
+      "import": "./dist/host/transport.js"
+    },
+    "./host/mastra": {
+      "types": "./dist/host/mastra.d.ts",
+      "import": "./dist/host/mastra.js"
+    },
+    "./host/postgres": {
+      "types": "./dist/host/postgres.d.ts",
+      "import": "./dist/host/postgres.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/sync-template.mjs",
@@ -45,7 +62,10 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.65.0",
     "vite": "^8.2.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "ai": "6.0.191",
+    "@mastra/core": "1.53.0",
+    "@electric-sql/pglite": "^0.5.4"
   },
   "keywords": [
     "dpas",
@@ -56,5 +76,13 @@
     "orpc-agent",
     "mastra",
     "assistant-ui"
-  ]
+  ],
+  "peerDependencies": {
+    "ai": "^5.0.0 || ^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    }
+  }
 }

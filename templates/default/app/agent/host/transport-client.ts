@@ -1,3 +1,4 @@
+import { applicationFetch } from "@/lib/transport";
 import type { AgentSurfaceRegistry, AgentToolset } from "@agent-surface/core";
 import { inspector } from "@/agent/inspector/inspector-store";
 import { committedSurfaceLocation } from "@/agent/surface/registry";
@@ -223,7 +224,7 @@ export async function runTurn(options: RunTurnOptions): Promise<TurnOutcome> {
 
     let response: Response;
     try {
-      response = await fetch("/agent/chat", {
+      response = await applicationFetch("/agent/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
@@ -533,7 +534,10 @@ async function consumeStepStream(
         // `undefined` means "server tool whose effect this server did not
         // declare" — which `mutatesData` counts as a write.
         if (frame.ok && sideEffectByWire.has(frame.wireName)) {
-          if (mutatesData(sideEffectByWire.get(frame.wireName)) && !awaitingApproval(frame.result)) {
+          if (
+            mutatesData(sideEffectByWire.get(frame.wireName)) &&
+            !awaitingApproval(frame.result)
+          ) {
             inspector.push({
               lane: "host",
               type: "reconcile",

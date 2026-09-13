@@ -175,6 +175,7 @@ export default defineConfig({
           { text: "Connecting a model", link: "/guides/connecting-a-model" },
           { text: "Testing without an LLM", link: "/guides/testing" },
           { text: "Deploying", link: "/guides/deploying" },
+          { text: "Separate runtimes", link: "/guides/distributed" },
         ],
       },
       {

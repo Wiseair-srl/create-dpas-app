@@ -1,3 +1,4 @@
+import { applicationFetch, backendEndpoint } from "./transport";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
@@ -11,12 +12,12 @@ import type { AppRouter } from "../../capabilities/registry";
  * reach the same procedure under the same policy. `orpc` exposes the TanStack
  * Query utils over the same client.
  *
- * Relative URL on purpose: in development Vite proxies /rpc to the Hono server,
- * in production the same server serves both. The client never learns which.
+ * Same-origin by default; transport.ts supplies configurable backend URLs and
+ * authenticated fetch when the backend and agent are deployed independently.
  */
 const link = new RPCLink({
-  url: `${window.location.origin}/rpc`,
-  fetch: (request, init) => fetch(request, { ...init, credentials: "include" }),
+  url: () => backendEndpoint("/rpc"),
+  fetch: applicationFetch,
 });
 
 export const client: RouterClient<AppRouter> = createORPCClient(link);

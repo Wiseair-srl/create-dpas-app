@@ -14,6 +14,7 @@
     "test": "pnpm -r --filter './packages/*' --filter './templates/*' test",
     "test:e2e": "pnpm --filter dpas-template-default test:e2e",
     "test:scaffold": "node scripts/scaffold-smoke.mjs",
+    "test:distributed": "node scripts/distributed-smoke.mjs",
     "view:inspect": "pnpm --filter dpas-template-default view:inspect",
     "view:check": "pnpm --filter dpas-template-default view:check",
     "domain:inspect": "pnpm --filter dpas-template-default domain:inspect",
