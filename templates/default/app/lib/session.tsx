@@ -1,3 +1,4 @@
+import { applicationFetch } from "@/lib/transport";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, type ReactNode } from "react";
 
@@ -29,7 +30,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const query = useQuery({
     queryKey: ["session"],
     queryFn: async (): Promise<SessionInfo> => {
-      const response = await fetch("/api/session", { credentials: "include" });
+      const response = await applicationFetch("/api/session", { credentials: "include" });
       if (!response.ok) throw new Error("Could not read the session.");
       return response.json();
     },
@@ -37,7 +38,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   });
 
   const setRole = async (role: "analyst" | "controller") => {
-    await fetch("/api/session", {
+    await applicationFetch("/api/session", {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",

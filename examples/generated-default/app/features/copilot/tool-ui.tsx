@@ -1,3 +1,4 @@
+import { applicationFetch } from "@/lib/transport";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ToolCallMessagePartComponent } from "@assistant-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,12 +37,7 @@ import { isEmptyPayload, PayloadSummary, PayloadView } from "./payload";
  */
 
 export type ApprovalStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "expired"
-  | "cancelled"
-  | "consumed";
+  "pending" | "approved" | "rejected" | "expired" | "cancelled" | "consumed";
 
 export type ApprovalCardData = {
   id: string;
@@ -99,7 +95,7 @@ function useApprovalRecord(approvalId: string | null): ApprovalCardData | null {
   useEffect(() => {
     if (!approvalId || polled || settled.has(approvalId)) return;
     let alive = true;
-    fetch(`/api/approvals/${approvalId}`, { credentials: "include" })
+    applicationFetch(`/api/approvals/${approvalId}`, { credentials: "include" })
       .then(json)
       .then((record: ApprovalCardData) => {
         if (record.status && record.status !== "pending") settled.set(approvalId, record);
@@ -306,7 +302,7 @@ function ApprovalGate({
     setDeciding(true);
     setError(null);
     try {
-      const { resolution } = (await fetch(`/api/approvals/${approvalId}`, {
+      const { resolution } = (await applicationFetch(`/api/approvals/${approvalId}`, {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },

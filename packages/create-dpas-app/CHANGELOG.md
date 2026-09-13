@@ -1,5 +1,12 @@
 # create-dpas-app
 
+## 0.6.0
+
+### Minor Changes
+
+- Publish installable host, Mastra, browser transport and Postgres integration subpaths. Compose remote governed domain capabilities with browser-owned tools; persist invocation and approval correlation before dispatch, reconcile unknown outcomes without repeating effects, and bind browser results to their original session and tool call. Support AI SDK 5/6, native Mastra suspension/resumption and explicit server-owned conversation memory. Include a runnable three-process reference and configurable starter backend/agent transports.
+- Use fresh Mastra agent instances with shared storage to refresh credentials on continuation. Receipt observer failures preserve completed results and required suspension. Update generated apps to oRPC Agent 5.0.0 and Agent Surface 0.24.0; pin matching Vitest/browser-provider versions for clean npm installs.
+
 ## 0.5.0
 
 ### Minor Changes

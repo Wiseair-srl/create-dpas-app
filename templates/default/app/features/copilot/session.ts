@@ -1,3 +1,4 @@
+import { applicationFetch } from "@/lib/transport";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { WireModelMessage } from "@/agent/host/protocol";
@@ -67,8 +68,12 @@ export function useCopilotSession(): CopilotSession {
 
   const refresh = useCallback(() => {
     void Promise.all([
-      fetch("/api/threads", { credentials: "include" }).then(json).catch(() => []),
-      fetch("/api/approvals", { credentials: "include" }).then(json).catch(() => []),
+      applicationFetch("/api/threads", { credentials: "include" })
+        .then(json)
+        .catch(() => []),
+      applicationFetch("/api/approvals", { credentials: "include" })
+        .then(json)
+        .catch(() => []),
     ]).then(([t, a]) => {
       setThreads(t);
       setApprovals(a);
@@ -76,7 +81,7 @@ export function useCopilotSession(): CopilotSession {
   }, []);
 
   useEffect(() => {
-    fetch("/api/session", { credentials: "include" })
+    applicationFetch("/api/session", { credentials: "include" })
       .then(json)
       .then((info: { models?: string[]; defaultModel?: string }) => {
         // Defaulted rather than trusted. `models` drives `liveEnabled`, and a
@@ -116,12 +121,12 @@ export function useCopilotSession(): CopilotSession {
       setLoadingThread(true);
       try {
         const [messages, meta] = await Promise.all([
-          fetch(`/api/threads/${id}/model-messages`, { credentials: "include" })
+          applicationFetch(`/api/threads/${id}/model-messages`, { credentials: "include" })
             .then(json)
             .catch(() => []) as Promise<WireModelMessage[]>,
           // A thread whose metadata failed to load still opens — the
           // transcript is the point, and a missing counter hides itself.
-          fetch(`/api/threads/${id}`, { credentials: "include" })
+          applicationFetch(`/api/threads/${id}`, { credentials: "include" })
             .then(json)
             .catch(() => ({})) as Promise<Partial<ThreadMeta>>,
         ]);

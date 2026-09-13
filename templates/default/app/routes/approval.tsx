@@ -1,3 +1,4 @@
+import { applicationFetch } from "@/lib/transport";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ShieldAlert } from "lucide-react";
@@ -66,7 +67,7 @@ export default function Approval() {
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(() => {
-    fetch(`/api/approvals/${id}`, { credentials: "include" })
+    applicationFetch(`/api/approvals/${id}`, { credentials: "include" })
       .then(json)
       .then((r: ApprovalCardData) => {
         setRecord(r);
@@ -93,7 +94,7 @@ export default function Approval() {
     setDeciding(true);
     setError(null);
     try {
-      const response = (await fetch(`/api/approvals/${id}`, {
+      const response = (await applicationFetch(`/api/approvals/${id}`, {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },

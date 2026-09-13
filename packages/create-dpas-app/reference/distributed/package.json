@@ -1,0 +1,29 @@
+{
+  "name": "dpas-distributed-reference",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n backend,agent,web \"node backend.mjs\" \"node host.mjs\" \"vite --host 127.0.0.1 --port 4310 --strictPort\"",
+    "test": "node smoke.mjs"
+  },
+  "dependencies": {
+    "create-dpas-app": "^0.6.0",
+    "@orpc-agent/core": "^5.0.0",
+    "@agent-surface/core": "^0.24.0",
+    "@agent-surface/compiler": "^0.24.0",
+    "@hono/node-server": "^2.0.12",
+    "@mastra/core": "1.53.0",
+    "@mastra/memory": "1.20.0",
+    "@orpc/server": "^1.14.13",
+    "ai": "6.0.191",
+    "concurrently": "^10.0.4",
+    "hono": "^4.12.33",
+    "vite": "^7.3.6",
+    "zod": "4.4.3"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "packageManager": "pnpm@10.15.0"
+}

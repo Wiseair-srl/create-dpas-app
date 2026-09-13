@@ -21,3 +21,12 @@ Flags: `--yes`, `--package-manager <pnpm|npm|yarn|bun>`,
 
 Full documentation, architecture guides, and the source of this scaffolder:
 the repository README and `docs/`, plus the docs generated into every app.
+
+## Existing projects and separate deployments
+
+Install `create-dpas-app` and import `create-dpas-app/host`,
+`create-dpas-app/host/mastra`, `create-dpas-app/host/postgres` or the browser-safe
+`create-dpas-app/host/transport`. The kit composes remote governed capabilities
+with live browser tools, persists invocation/approval correlation and supports
+Mastra-owned memory with AI SDK 5/6. The package includes a runnable
+`reference/distributed` example; see the repository distributed deployment guide.
