@@ -1,0 +1,1064 @@
+/**
+ * Landing page (docs/index.md → <HomeLanding />).
+ *
+ * One rule carries the identity: there are exactly two accents, and they are
+ * semantic. Violet is the view plane (browser), blue is the domain plane
+ * (server). Anything on the page that belongs to a plane carries its colour as
+ * a marker, a rule or a label; nothing else is coloured. Every class is
+ * prefixed `dh-` and every rule is scoped under `.dh`, so no other page
+ * changes.
+ */
+
+:root {
+  --dh-view: #7c3aed;
+  --dh-domain: #2563eb;
+  --dh-view-tint: rgba(124, 58, 237, 0.06);
+  --dh-domain-tint: rgba(37, 99, 235, 0.06);
+  --dh-mono:
+    "Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --dh-rule: var(--vp-c-divider);
+  --dh-rule-strong: var(--vp-c-border);
+}
+
+.dark {
+  --dh-view: #a78bfa;
+  --dh-domain: #60a5fa;
+  --dh-view-tint: rgba(167, 139, 250, 0.07);
+  --dh-domain-tint: rgba(96, 165, 250, 0.07);
+}
+
+/* ── Frame ────────────────────────────────────────────────────────────── */
+
+.dh {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+  color: var(--vp-c-text-1);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+@media (min-width: 768px) {
+  .dh {
+    padding: 0 32px 128px;
+  }
+}
+
+.dh code {
+  font-family: var(--dh-mono);
+  font-size: 0.875em;
+}
+
+.dh-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dh :focus-visible {
+  outline: 2px solid var(--vp-c-text-1);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ── Shared type ──────────────────────────────────────────────────────── */
+
+.dh-link {
+  color: var(--vp-c-text-1);
+  text-decoration: underline;
+  text-decoration-color: var(--dh-rule-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.2s;
+}
+
+.dh-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.dh-link--strong {
+  font-weight: 600;
+}
+
+.dh-eyebrow {
+  margin: 0 0 14px;
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--vp-c-text-2);
+}
+
+.dh-h2 {
+  margin: 0;
+  font-size: clamp(26px, 20px + 1.6vw, 34px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--vp-c-text-1);
+}
+
+.dh-h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--vp-c-text-1);
+}
+
+.dh-lede {
+  margin: 14px 0 0;
+  max-width: 40em;
+  font-size: 17px;
+  color: var(--vp-c-text-2);
+}
+
+.dh-section {
+  margin-top: 96px;
+  padding-top: 32px;
+  border-top: 1px solid var(--dh-rule);
+}
+
+@media (min-width: 960px) {
+  .dh-section {
+    margin-top: 128px;
+  }
+}
+
+.dh-head {
+  margin-bottom: 40px;
+}
+
+.dh-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 28px 0 0;
+  font-size: 15px;
+}
+
+/* ── Plane mark and tags ──────────────────────────────────────────────── */
+
+.dh-mark {
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 10px;
+  vertical-align: -0.05em;
+  color: var(--vp-c-text-3);
+}
+
+.dh-mark path {
+  fill: currentColor;
+  fill-opacity: 0;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.dh-mark--view {
+  color: var(--dh-view);
+}
+
+.dh-mark--domain {
+  color: var(--dh-domain);
+}
+
+.dh-mark--view path,
+.dh-mark--domain path {
+  fill-opacity: 0.25;
+}
+
+.dh-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--vp-c-text-2);
+}
+
+.dh-tag--view {
+  color: var(--dh-view);
+}
+
+.dh-tag--domain {
+  color: var(--dh-domain);
+}
+
+/* ── 1 · Hero ─────────────────────────────────────────────────────────── */
+
+.dh-hero {
+  display: grid;
+  gap: 56px;
+  padding-top: 56px;
+}
+
+@media (min-width: 960px) {
+  .dh-hero {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    align-items: center;
+    gap: 64px;
+    padding-top: 96px;
+  }
+}
+
+.dh-wordmark {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0 0 28px;
+  font-family: var(--dh-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-text-1);
+}
+
+.dh-wordmark-sub {
+  font-weight: 400;
+  color: var(--vp-c-text-2);
+}
+
+.dh-wordmark-mark {
+  width: 20px;
+  height: 20px;
+}
+
+.dh-wordmark-mark path {
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  fill-opacity: 0.2;
+}
+
+.dh-wordmark-view {
+  fill: var(--dh-view);
+  stroke: var(--dh-view);
+}
+
+.dh-wordmark-domain {
+  fill: var(--dh-domain);
+  stroke: var(--dh-domain);
+}
+
+.dh-hero-title {
+  margin: 0;
+  max-width: 15em;
+  font-size: clamp(34px, 22px + 3vw, 54px);
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  color: var(--vp-c-text-1);
+}
+
+.dh-hero-tagline {
+  margin: 24px 0 0;
+  max-width: 34em;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--vp-c-text-2);
+}
+
+.dh-hero-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 20px 0 0;
+  font-size: 15px;
+}
+
+.dh-hero-figure {
+  max-width: 380px;
+}
+
+@media (min-width: 960px) {
+  .dh-hero-figure {
+    max-width: 420px;
+    justify-self: end;
+    width: 100%;
+  }
+}
+
+/* Copyable command: the primary call to action. */
+
+.dh-cmd {
+  display: flex;
+  align-items: stretch;
+  max-width: 34em;
+  margin-top: 36px;
+  border: 1px solid var(--dh-rule-strong);
+  border-radius: 6px;
+  background: var(--vp-c-bg-soft);
+}
+
+.dh-cmd-text {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 13px 16px;
+  white-space: nowrap;
+  font-family: var(--dh-mono);
+  font-size: 14px !important;
+  line-height: 1.5;
+  color: var(--vp-c-text-1);
+  scrollbar-width: thin;
+}
+
+.dh-cmd-prompt {
+  color: var(--vp-c-text-3);
+  user-select: none;
+}
+
+.dh-cmd-copy {
+  flex: none;
+  min-width: 72px;
+  padding: 0 16px;
+  border-left: 1px solid var(--dh-rule-strong);
+  border-radius: 0 6px 6px 0;
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.dh-cmd-copy:hover {
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-default-soft);
+}
+
+.dh-cmd-copy:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (max-width: 480px) {
+  .dh-cmd-text {
+    padding: 12px;
+    font-size: 13px !important;
+  }
+
+  .dh-cmd-copy {
+    min-width: 60px;
+    padding: 0 10px;
+  }
+}
+
+/* The two planes, one catalog. */
+
+.dh-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.dh-diagram-plane {
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.dh-diagram-plane--view {
+  fill: var(--dh-view-tint);
+  stroke: var(--dh-view);
+}
+
+.dh-diagram-plane--domain {
+  fill: var(--dh-domain-tint);
+  stroke: var(--dh-domain);
+}
+
+.dh-diagram-catalog,
+.dh-diagram-leader {
+  stroke: var(--vp-c-text-2);
+  stroke-width: 1;
+}
+
+.dh-diagram-leader {
+  stroke: var(--vp-c-text-3);
+}
+
+.dh-diagram-node--view {
+  fill: var(--dh-view);
+}
+
+.dh-diagram-node--domain {
+  fill: var(--dh-domain);
+}
+
+.dh-diagram-token {
+  fill: var(--vp-c-text-1);
+  opacity: 0;
+  animation: dh-travel 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes dh-travel {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(326px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dh-diagram-token {
+    animation: none;
+    display: none;
+  }
+}
+
+.dh-diagram-label {
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  fill: var(--vp-c-text-1);
+}
+
+.dh-diagram-label--view {
+  fill: var(--dh-view);
+  font-weight: 500;
+}
+
+.dh-diagram-label--domain {
+  fill: var(--dh-domain);
+  font-weight: 500;
+}
+
+.dh-diagram-label--muted {
+  fill: var(--vp-c-text-2);
+  letter-spacing: 0;
+}
+
+/* ── 2 · One declaration, three callers ───────────────────────────────── */
+
+.dh-callers {
+  display: grid;
+  gap: 32px;
+}
+
+@media (min-width: 960px) {
+  .dh-callers {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 0;
+  }
+}
+
+.dh-code {
+  margin: 0;
+  min-width: 0;
+  border: 1px solid var(--dh-rule-strong);
+  border-radius: 6px;
+  background: var(--vp-c-bg-soft);
+}
+
+.dh-code-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--dh-rule);
+  border-top: 2px solid var(--dh-domain);
+  border-radius: 6px 6px 0 0;
+}
+
+.dh-code-path {
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+}
+
+.dh-code-pre {
+  margin: 0;
+  padding: 16px 0;
+  overflow-x: auto;
+  font-family: var(--dh-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--vp-c-text-1);
+}
+
+.dh-code-pre code {
+  display: inline-block;
+  min-width: 100%;
+  font-size: inherit;
+}
+
+.dh-code-line {
+  display: block;
+  padding: 0 16px;
+  white-space: pre;
+}
+
+.dh-code-line--mark {
+  background: var(--vp-c-default-soft);
+  box-shadow: inset 2px 0 0 var(--vp-c-text-1);
+}
+
+.dh-tok-k {
+  font-weight: 600;
+}
+
+.dh-tok-s {
+  color: var(--vp-c-text-2);
+}
+
+.dh-tok-c {
+  color: var(--vp-c-text-3);
+}
+
+.dh-tok-key {
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.dh-tok-key[data-n]::after {
+  content: attr(data-n);
+  position: relative;
+  top: -0.6em;
+  margin-left: 1px;
+  font-size: 0.75em;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+}
+
+.dh-caller-list {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dh-caller {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px auto 1fr;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--dh-rule);
+}
+
+.dh-caller:last-child {
+  border-bottom: 1px solid var(--dh-rule);
+}
+
+.dh-caller p {
+  grid-column: 2 / -1;
+  margin: 0;
+  font-size: 15px;
+  color: var(--vp-c-text-2);
+}
+
+.dh-caller p strong {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.dh-caller-n {
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+}
+
+.dh-caller-key {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  font-weight: 600;
+}
+
+/* Desktop: a bracket from the declaration to its three callers. */
+@media (min-width: 960px) {
+  .dh-caller-list {
+    padding-left: 56px;
+  }
+
+  .dh-caller-list::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 28px;
+    border-top: 1px solid var(--dh-rule-strong);
+  }
+
+  .dh-caller::before,
+  .dh-caller::after {
+    content: "";
+    position: absolute;
+    left: -28px;
+    border-color: var(--dh-rule-strong);
+  }
+
+  /* tick */
+  .dh-caller::before {
+    top: 27px;
+    width: 22px;
+    border-top: 1px solid var(--dh-rule-strong);
+  }
+
+  /* spine */
+  .dh-caller::after {
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid var(--dh-rule-strong);
+  }
+
+  .dh-caller:first-child::after {
+    top: 27px;
+  }
+
+  .dh-caller:last-child::after {
+    bottom: auto;
+    height: 28px;
+  }
+}
+
+/* ── 3 · Two planes ───────────────────────────────────────────────────── */
+
+.dh-planes {
+  border-top: 1px solid var(--dh-rule);
+}
+
+.dh-plane {
+  display: grid;
+  gap: 20px;
+  padding: 28px 0 28px 20px;
+  border-bottom: 1px solid var(--dh-rule);
+  box-shadow: inset 3px 0 0 var(--dh-plane);
+}
+
+.dh-plane--view {
+  --dh-plane: var(--dh-view);
+}
+
+.dh-plane--domain {
+  --dh-plane: var(--dh-domain);
+}
+
+@media (min-width: 960px) {
+  .dh-plane {
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 40px;
+    padding-left: 28px;
+  }
+}
+
+.dh-plane-head {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.dh-plane-head .dh-h3 {
+  font-size: 22px;
+  letter-spacing: -0.015em;
+}
+
+.dh-plane-id {
+  font-size: 12px !important;
+  color: var(--vp-c-text-2);
+  overflow-wrap: anywhere;
+}
+
+.dh-facts {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .dh-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+  }
+}
+
+.dh-facts dt {
+  margin-bottom: 4px;
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+}
+
+.dh-facts dd {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--vp-c-text-1);
+}
+
+.dh-planes-close {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 22px 0 22px 20px;
+  border-bottom: 1px solid var(--dh-rule);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--vp-c-text-1);
+}
+
+@media (min-width: 960px) {
+  .dh-planes-close {
+    padding-left: 28px;
+  }
+}
+
+/* ── 4 · A run, traced ────────────────────────────────────────────────── */
+
+.dh-trace {
+  --dh-trace-cols: 40px minmax(0, 1fr);
+}
+
+@media (min-width: 768px) {
+  .dh-trace {
+    --dh-trace-cols: 56px minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.dh-lanes {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .dh-lanes {
+    display: grid;
+    grid-template-columns: var(--dh-trace-cols);
+    column-gap: 24px;
+    font-family: var(--dh-mono);
+    font-size: 12px;
+  }
+
+  .dh-lane {
+    padding: 0 0 10px;
+    border-bottom: 2px solid currentColor;
+  }
+
+  .dh-lane--view {
+    color: var(--dh-view);
+  }
+
+  .dh-lane--domain {
+    color: var(--dh-domain);
+  }
+}
+
+.dh-act-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 22px 0 18px;
+  border-top: 1px solid var(--dh-rule);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.dh-lanes + .dh-act .dh-act-prompt {
+  border-top: 0;
+}
+
+.dh-act-who {
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 26px;
+  color: var(--vp-c-text-2);
+}
+
+@media (min-width: 768px) {
+  .dh-act-prompt {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    column-gap: 24px;
+  }
+}
+
+.dh-act-quote {
+  font-style: italic;
+}
+
+.dh-steps {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.dh-step {
+  display: grid;
+  grid-template-columns: var(--dh-trace-cols);
+  column-gap: 24px;
+  padding: 6px 0;
+}
+
+@media (max-width: 767px) {
+  .dh-step {
+    column-gap: 12px;
+  }
+}
+
+.dh-step-n {
+  padding-top: 14px;
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+}
+
+.dh-step-body {
+  grid-column: 2;
+  min-width: 0;
+  padding: 12px 0 12px 16px;
+  border-left: 2px solid var(--vp-c-text-3);
+}
+
+.dh-step--view .dh-step-body {
+  border-left-color: var(--dh-view);
+}
+
+.dh-step--domain .dh-step-body {
+  border-left-color: var(--dh-domain);
+}
+
+@media (min-width: 768px) {
+  .dh-step--domain .dh-step-body {
+    grid-column: 3;
+  }
+
+  .dh-step--none .dh-step-body {
+    grid-column: 2 / -1;
+    border-left-style: dashed;
+  }
+
+  /* The lane already says which plane; the tag only names the model step. */
+  .dh-step--view .dh-tag,
+  .dh-step--domain .dh-tag {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+}
+
+.dh-step-id {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 13px !important;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .dh-step-id {
+    margin-top: 0;
+  }
+}
+
+.dh-step-id--gone {
+  color: var(--vp-c-text-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.dh-step-text {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--vp-c-text-2);
+}
+
+.dh-step--none .dh-step-text {
+  margin-top: 6px;
+  color: var(--vp-c-text-1);
+}
+
+.dh-step-text code {
+  color: var(--vp-c-text-1);
+}
+
+.dh-step-note {
+  display: inline-block;
+  margin: 10px 0 0;
+  padding: 2px 8px;
+  border: 1px solid var(--dh-rule-strong);
+  border-radius: 4px;
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  color: var(--vp-c-text-1);
+}
+
+/* ── 5 · Guarantees ledger ────────────────────────────────────────────── */
+
+.dh-ledger {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--dh-rule-strong);
+}
+
+.dh-ledger-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 8px 12px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--dh-rule);
+}
+
+.dh-ledger-row > :not(.dh-ledger-n) {
+  grid-column: 2;
+}
+
+@media (min-width: 960px) {
+  .dh-ledger-row {
+    grid-template-columns: 56px 260px minmax(0, 1fr) 220px;
+    gap: 0 32px;
+    align-items: baseline;
+  }
+
+  .dh-ledger-row > :not(.dh-ledger-n) {
+    grid-column: auto;
+  }
+}
+
+.dh-ledger-n {
+  font-family: var(--dh-mono);
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+}
+
+.dh-ledger-claim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+}
+
+.dh-ledger-planes {
+  display: inline-flex;
+  gap: 4px;
+  margin: 0;
+}
+
+.dh-ledger-detail {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
+
+.dh-ledger-evidence {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--vp-c-text-1);
+  text-decoration: none;
+}
+
+.dh-ledger-evidence > span:last-child {
+  text-decoration: underline;
+  text-decoration-color: var(--dh-rule-strong);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.2s;
+}
+
+.dh-ledger-evidence:hover > span:last-child {
+  text-decoration-color: currentColor;
+}
+
+.dh-ledger-evidence-label {
+  font-family: var(--dh-mono);
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+}
+
+/* ── 6 · Reading paths ────────────────────────────────────────────────── */
+
+.dh-routes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--dh-rule-strong);
+}
+
+.dh-route {
+  display: grid;
+  gap: 6px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--dh-rule);
+}
+
+@media (min-width: 768px) {
+  .dh-route {
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 32px;
+    align-items: baseline;
+  }
+}
+
+.dh-route-who {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.dh-route-path {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+}
+
+.dh-route-path li + li::before {
+  content: "→";
+  margin: 0 10px;
+  font-family: var(--dh-mono);
+  font-size: 13px;
+  color: var(--vp-c-text-3);
+}
+
+/* ── 7 · Provenance ───────────────────────────────────────────────────── */
+
+.dh-provenance {
+  max-width: 44em;
+  margin: 72px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--vp-c-text-2);
+}
+
+.dh-provenance .dh-link {
+  color: var(--vp-c-text-2);
+}
+
+.dh-provenance code {
+  font-size: 12px;
+}
