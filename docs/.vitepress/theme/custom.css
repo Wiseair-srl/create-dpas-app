@@ -2,8 +2,8 @@
  * create-dpas-app docs theme.
  *
  * The accent is the generated app's own accent (`--accent` in the template's
- * globals.css): blue in light mode, a lighter blue in dark. The hero gradient
- * runs blue → violet, the two planes the whole stack is named after.
+ * globals.css): blue in light mode, a lighter blue in dark. The landing page's
+ * two plane colours live in home.css.
  */
 
 :root {
@@ -11,15 +11,6 @@
   --vp-c-brand-2: #1d4ed8;
   --vp-c-brand-3: #1e40af;
   --vp-c-brand-soft: rgba(37, 99, 235, 0.14);
-
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(120deg, #2563eb 30%, #7c3aed);
-  --vp-home-hero-image-background-image: linear-gradient(
-    -45deg,
-    rgba(37, 99, 235, 0.5) 40%,
-    rgba(124, 58, 237, 0.45) 60%
-  );
-  --vp-home-hero-image-filter: blur(56px);
 }
 
 .dark {
@@ -27,8 +18,6 @@
   --vp-c-brand-2: #3b82f6;
   --vp-c-brand-3: #2563eb;
   --vp-c-brand-soft: rgba(96, 165, 250, 0.16);
-
-  --vp-home-hero-name-background: linear-gradient(120deg, #60a5fa 30%, #a78bfa);
 }
 
 /* Pages lead with a `>` blockquote stating what the page is; render those (and
@@ -67,16 +56,4 @@
 
 .vp-doc :not(pre) > code {
   border-radius: 5px;
-}
-
-/* Home: feature cards get a hover lift. */
-.VPFeature {
-  transition:
-    border-color 0.25s,
-    transform 0.25s;
-}
-
-.VPFeature:hover {
-  border-color: var(--vp-c-brand-1);
-  transform: translateY(-2px);
 }
